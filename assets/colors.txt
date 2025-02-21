@@ -1,0 +1,61 @@
+(Hortalizas)
+background: linear-gradient(to right, #00875F, #007855, #006B57);
+#00875F
+#007855
+#006B57
+texto
+#14cf97
+
+(Carniceria)
+background: linear-gradient(to right, #E63434, #D33031, #C12D2D);
+#E63434
+#D33031
+#C12D2D
+texto
+#FFA9AA
+
+(Viveres)
+background: linear-gradient(to right, #8D6E63, #7B5544, #6A4A3D);
+#8D6E63
+#7B5544
+#6A4A3D
+texto
+#D2B49C
+
+(Pescaderia)
+background: linear-gradient(to right, #008B8B, #006E6E, #005454);
+#008B8B
+#006E6E
+#005454
+texto
+#B2F5F5
+
+(Higiene)
+background: linear-gradient(to right, #5C6BC0, #4953A4, #3E4387);
+#5C6BC0
+#4953A4
+#3E4387
+texto
+#BDC6FF
+
+(Cesta de amor / Iglesia)
+background: linear-gradient(to right, #FDD835, #FFC107, #FFA000);
+#FDD835
+#FFC107
+#FFA000
+texto
+#FFF59D
+
+(Otros/Opcionales)
+background: linear-gradient(to right, #9E9E9E, #7E7E7E, #616161);
+#9E9E9E
+#7E7E7E
+#616161
+Texto
+#E0E0E0
+
+Letras
+#F4F4F4
+
+fondo
+#f0f0f0
