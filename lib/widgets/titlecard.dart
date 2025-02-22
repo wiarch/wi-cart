@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 
 class TitleCard extends StatelessWidget {
-  const TitleCard({super.key});
+  const TitleCard({super.key,
+    required this.name,
+  });
+
+  final String name;
 
   @override
   Widget build(BuildContext context) {
@@ -9,8 +13,7 @@ class TitleCard extends StatelessWidget {
       children: [
         CircleAvatar(child: Text('W')),
         const SizedBox(width: 10),
-        Text(
-          'William Ache',
+        Text(name,
           style: TextStyle(
             fontSize: 15,
             color: Colors.black,

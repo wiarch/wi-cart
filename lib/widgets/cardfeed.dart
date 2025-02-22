@@ -5,7 +5,9 @@ import 'imagecard.dart';
 import 'buttonscard.dart';
 
 class CardFeed extends StatelessWidget {
-  const CardFeed({super.key});
+  const CardFeed({super.key, required this.card});
+
+  final Map<String, String> card;
 
   @override
   Widget build(BuildContext context) {
@@ -25,12 +27,16 @@ class CardFeed extends StatelessWidget {
         // padding: const EdgeInsets.all(10),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(padding: const EdgeInsets.all(10), child: TitleCard()),
+            Container(
+              padding: const EdgeInsets.all(10),
+              child: TitleCard(name: card['name'] ?? ''),
+            ),
 
-            DescriptionCard(),
+            DescriptionCard(description: card['description'] ?? ''),
 
-            ImageCard(),
+            ImageCard(image: card['image'] ?? ''),
 
             ButtonsCard(textStyle: textStyle),
           ],

@@ -10,7 +10,7 @@ class ListCardFeed extends StatelessWidget {
     return ListView.builder(
       itemCount: listCard.length,
       itemBuilder: (context, index) {
-        return CardFeed();
+        return CardFeed(card: listCard[index],);
       },
     );
   }
