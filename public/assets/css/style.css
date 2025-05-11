@@ -1,0 +1,16 @@
+/* css scroll  */
+body::-webkit-scrollbar {
+    width: 7px !important;
+    height: 7px !important;
+    overflow: visible !important;
+}
+
+body::-webkit-scrollbar-thumb {
+    background: #0090e7 !important;
+    border-radius: 7px !important;
+}
+
+body::-webkit-scrollbar-thumb:horizontal {
+    background: #0090e7 !important;
+    border-radius: 7px !important;
+}
