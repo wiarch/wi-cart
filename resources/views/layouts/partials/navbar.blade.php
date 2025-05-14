@@ -68,9 +68,9 @@
                 <a class="nav-link" id="profileDropdown" href="#" data-toggle="dropdown">
                     <div class="navbar-profile">
                         <img class="img-xs rounded-circle"
-                            src="https://ui-avatars.com/api/?background=random&name=ninos" alt="">
+                            src="https://ui-avatars.com/api/?background=random&name={{ auth()->user()->username }}" alt="">
                         {{-- <img class="round" src="https://ui-avatars.com/api/?background=random&name={{ session('user')->nombre }}"> --}}
-                        <p class="mb-0 d-none d-sm-block navbar-profile-name">Ninos</p>
+                        <p class="mb-0 d-none d-sm-block navbar-profile-name text-uppercase">{{ auth()->user()->username }}</p>
                         <i class="mdi mdi-menu-down d-none d-sm-block"></i>
                     </div>
                 </a>
