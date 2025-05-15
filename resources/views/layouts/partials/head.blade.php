@@ -6,10 +6,12 @@
     <meta name="description" content="ryes">
     <meta name="keywords" content="admin ryes">
     <meta name="author" content="ITOeste">
+    <!-- PWA meta tags directive -->
+    @PwaHead 
 
     <title>{{ config('app.name', 'List Market') }} - @yield('title')</title>
 
-    <link rel="shortcut icon" href="assets/images/favicon.png" />
+    <link rel="shortcut icon" href="{{ asset('favicon.svg') }}" />
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">

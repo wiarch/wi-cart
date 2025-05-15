@@ -14,9 +14,14 @@
             @yield('content')
 
         </div>
-
+        @include('layouts.partials.fab')
     </div>
+
+
     @include('layouts.partials.script')
+    
+    <!-- Service worker registration -->
+    @RegisterServiceWorkerScript
 </body>
 
 </html>

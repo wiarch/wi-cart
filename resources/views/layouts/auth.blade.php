@@ -19,7 +19,8 @@
     </div>
 
     @include('layouts.partials.script')
-
+    <!-- Service worker registration -->
+    @RegisterServiceWorkerScript
 </body>
 
 </html>

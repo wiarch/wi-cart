@@ -11,6 +11,9 @@
 <script src="{{ asset('template/js/todolist.js') }}"></script>
 <script src="{{ asset('template/js/dashboard.js') }}"></script>
 
+<script src="{{ asset('assets/js/fab.js') }}"></script>
+
+
 @yield('scripts')
 
 

@@ -15,6 +15,7 @@ body::-webkit-scrollbar-thumb:horizontal {
     border-radius: 7px !important;
 }
 
+/* navegacion */
  @media (min-width: 994px) {
   .sidebar-fixed {
     position: fixed;
