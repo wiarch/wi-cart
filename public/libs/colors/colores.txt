@@ -1,0 +1,7 @@
+#171718 (casi negro)
+#1f2124 (gris oscuro)
+#393d42 (gris medio)
+#6a6e73 (gris claro)
+#9fa3a9 (gris más claro)
+#dadada (casi blanco)
+#f5f6fa (blanco azulado)
