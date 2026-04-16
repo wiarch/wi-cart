@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Mis Listas - Market Editor</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary-fixed-variant": "#005c64",
+                    "tertiary-dim": "#005861",
+                    "on-primary": "#d1ffc8",
+                    "primary-fixed-dim": "#83e881",
+                    "outline-variant": "#abaeac",
+                    "surface-bright": "#f5f7f5",
+                    "on-tertiary-fixed": "#003d43",
+                    "secondary-container": "#86faac",
+                    "inverse-primary": "#91f78d",
+                    "on-secondary-fixed": "#004a25",
+                    "tertiary": "#00656f",
+                    "on-primary-fixed-variant": "#00691a",
+                    "inverse-surface": "#0c0f0e",
+                    "surface-container-highest": "#dadedb",
+                    "on-primary-fixed": "#00480f",
+                    "on-primary-container": "#005e16",
+                    "error-dim": "#b92902",
+                    "secondary-fixed-dim": "#78eb9f",
+                    "primary-fixed": "#91f78d",
+                    "on-error": "#ffefec",
+                    "surface-container-lowest": "#ffffff",
+                    "secondary-fixed": "#86faac",
+                    "surface": "#f5f7f5",
+                    "primary": "#006b1b",
+                    "on-secondary-container": "#005f32",
+                    "secondary": "#006a38",
+                    "on-tertiary": "#d4f9ff",
+                    "on-secondary": "#ccffd6",
+                    "on-background": "#2c2f2e",
+                    "primary-container": "#91f78d",
+                    "surface-container-low": "#eff1ef",
+                    "surface-variant": "#dadedb",
+                    "on-secondary-fixed-variant": "#006a38",
+                    "secondary-dim": "#005c30",
+                    "background": "#f5f7f5",
+                    "error-container": "#f95630",
+                    "on-tertiary-container": "#005159",
+                    "tertiary-fixed": "#11eafe",
+                    "surface-dim": "#d1d5d3",
+                    "on-error-container": "#520c00",
+                    "primary-dim": "#005d16",
+                    "error": "#b02500",
+                    "tertiary-fixed-dim": "#00dbee",
+                    "on-surface": "#2c2f2e",
+                    "outline": "#747776",
+                    "on-surface-variant": "#595c5b",
+                    "surface-container-high": "#e0e3e1",
+                    "inverse-on-surface": "#9b9d9c",
+                    "surface-container": "#e6e9e7",
+                    "surface-tint": "#006b1b",
+                    "tertiary-container": "#11eafe"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Inter"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        .glass-header { backdrop-filter: blur(20px); }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-[#f5f7f5]/80 backdrop-blur-xl shadow-[0px_0px_32px_0px_rgba(44,47,46,0.06)]">
+<div class="flex justify-between items-center px-6 py-4 w-full max-w-screen-xl mx-auto">
+<div class="flex items-center gap-4">
+<button class="p-2 text-[#006b1b] active:scale-95 duration-200 hover:bg-[#eff1ef] rounded-full">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<h1 class="font-['Inter'] text-2xl font-bold tracking-tight text-[#2c2f2e]">Market Editor</h1>
+</div>
+<div class="flex items-center">
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary/10">
+<img alt="Editorial User Profile" data-alt="Close-up portrait of a stylish woman with soft natural lighting and a minimalist aesthetic background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBaCM3kSFEa8RXr-vaXjLOdfe7TRcRUSQ-2-cnwzL7rH6bGemW4w1W1RakfDITnDobHh5OzXbSC5FQqcLX9FEVebT1rFKXMeKJpFndzQVTNQAwro-W91a9Q1xle8lkjOZHFmBeZc-g_46oel8mEM_WyPjzN0lps5XAjMu-XrktDkyRue7xw4o_1D0ThXz4J_u31Fe3vJHBTzNVNGeq-WE5JRFWPYrQFkaW73WYkL1PE6GmL976FTJxAkT0wfAPZar3uVq1QrQJLyuwF"/>
+</div>
+</div>
+</div>
+</header>
+<main class="pt-24 px-6 max-w-screen-xl mx-auto">
+<!-- Editorial Header Section -->
+<section class="mb-10 pt-4">
+<span class="text-primary font-bold tracking-widest text-[10px] uppercase mb-2 block">Curated Collections</span>
+<h2 class="text-4xl md:text-5xl font-black text-on-surface tracking-tighter leading-none mb-4">Mis Listas</h2>
+<p class="text-on-surface-variant max-w-md font-medium text-sm">Organiza tus compras con la precisión de un editor. Frescura y orden en cada selección.</p>
+</section>
+<!-- Search Bar - Integrated Style -->
+<div class="mb-12">
+<div class="bg-surface-container-high rounded-2xl flex items-center px-5 py-4 w-full">
+<span class="material-symbols-outlined text-on-surface-variant mr-3" data-icon="search">search</span>
+<input class="bg-transparent border-none focus:ring-0 w-full text-on-surface placeholder:text-on-surface-variant font-medium" placeholder="Buscar en mis colecciones..." type="text"/>
+</div>
+</div>
+<!-- Bento Grid Layout for Lists -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<!-- List Card 1: Main Highlight -->
+<div class="group relative bg-surface-container-lowest rounded-3xl p-6 shadow-[0px_4px_24px_rgba(0,0,0,0.02)] border border-outline-variant/5 hover:shadow-[0px_8px_32px_rgba(0,107,27,0.08)] transition-all duration-300 flex flex-col justify-between min-h-[220px]">
+<div class="absolute top-6 right-6">
+<span class="bg-secondary-container text-on-secondary-container text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">Activa</span>
+</div>
+<div>
+<div class="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mb-4 text-primary">
+<span class="material-symbols-outlined" data-icon="shopping_basket">shopping_basket</span>
+</div>
+<h3 class="text-xl font-bold text-on-surface mb-1">Compra Mensual</h3>
+<p class="text-on-surface-variant text-sm font-medium">42 artículos • Editada hoy</p>
+</div>
+<div class="flex items-center justify-between mt-6">
+<div class="flex -space-x-2">
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-lowest bg-surface-container-low overflow-hidden">
+<img alt="Veggie" data-alt="fresh vibrant green vegetables macro shot with natural light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCnCRrnV99IJeswfBTTC8pb9DtxxUBe6Lh8ZIZHxsFVHz726nu6-P5IzAgLr4Sc3oxOdCsqL4HmAarCza1vCK2Bd6fvsU3FBEfOpPcRLSCmh7-NMIyMv5udVRJsUzj8ulV6AxoIIzm_jwtvfe61RL24Zkt2rIchMeWU3-xLEnVaSMeYSlnQlC9kMLSxSIneHTbG6LJ1MWzPqamZuNqcUNn34ZKdt-ubhDCHShZtE-DEnLIsmFiPKURtjXzmV6XIrpxINuoriOxXlu4_"/>
+</div>
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-lowest bg-surface-container-low overflow-hidden">
+<img alt="Fruit" data-alt="assorted fresh fruits in a wooden bowl with cinematic lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAUCf_c7LDv9qmij517mRaMh5aU_SQ5L_zzz2BTjWPA4kZOTru6zD-VxZ5AfxQssyOICwoXBz77A6WKgIZ8mTeG_gDW9dLEKM86X9y1zLM2tQv18QZhFdfv-FPNUUxQYTab_Zpe95bxzCergBAaMlEDznQk1CLYrzy6Zuvpi_v7k0rcvUKKGx5hGHVPLlMkFZTfdSnac3anzTdnSYrVaDp4rxW5BRAtGSg2TnotP7dz0gBg_crgvZGrtKgHNqaimzNtKRsV9k9lLZh8"/>
+</div>
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-lowest bg-surface-container-low flex items-center justify-center bg-surface-container text-[10px] font-bold text-on-surface-variant">
+                            +5
+                        </div>
+</div>
+<button class="text-primary font-bold text-sm hover:underline">Ver detalles</button>
+</div>
+</div>
+<!-- List Card 2 -->
+<div class="bg-surface-container-lowest rounded-3xl p-6 shadow-[0px_4px_24px_rgba(0,0,0,0.02)] border border-outline-variant/5 hover:shadow-[0px_8px_32px_rgba(0,107,27,0.08)] transition-all duration-300 flex flex-col justify-between min-h-[220px]">
+<div>
+<div class="w-12 h-12 bg-tertiary-container/30 rounded-2xl flex items-center justify-center mb-4 text-tertiary-dim">
+<span class="material-symbols-outlined" data-icon="outdoor_grill">outdoor_grill</span>
+</div>
+<h3 class="text-xl font-bold text-on-surface mb-1">Parrillada</h3>
+<p class="text-on-surface-variant text-sm font-medium">12 artículos • 15 Oct, 2023</p>
+</div>
+<div class="mt-6 flex justify-between items-center">
+<span class="text-xs font-bold text-on-surface-variant/60 uppercase">Especial</span>
+<button class="p-2 rounded-xl hover:bg-surface-container-low text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</div>
+</div>
+<!-- List Card 3 -->
+<div class="bg-surface-container-lowest rounded-3xl p-6 shadow-[0px_4px_24px_rgba(0,0,0,0.02)] border border-outline-variant/5 hover:shadow-[0px_8px_32px_rgba(0,107,27,0.08)] transition-all duration-300 flex flex-col justify-between min-h-[220px]">
+<div>
+<div class="w-12 h-12 bg-secondary-container/50 rounded-2xl flex items-center justify-center mb-4 text-on-secondary-container">
+<span class="material-symbols-outlined" data-icon="bakery_dining">bakery_dining</span>
+</div>
+<h3 class="text-xl font-bold text-on-surface mb-1">Desayuno Brunch</h3>
+<p class="text-on-surface-variant text-sm font-medium">8 artículos • 12 Oct, 2023</p>
+</div>
+<div class="mt-6 flex justify-between items-center">
+<span class="text-xs font-bold text-on-surface-variant/60 uppercase">Favorito</span>
+<button class="p-2 rounded-xl hover:bg-surface-container-low text-on-surface-variant">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</div>
+</div>
+<!-- Empty/New State Bento Item -->
+<div class="bg-surface-container-low/50 rounded-3xl p-6 border-2 border-dashed border-outline-variant/20 flex flex-col items-center justify-center min-h-[220px] group hover:border-primary/40 transition-colors">
+<div class="w-14 h-14 rounded-full bg-surface-container-lowest flex items-center justify-center mb-4 shadow-sm group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-primary text-3xl" data-icon="add">add</span>
+</div>
+<p class="text-on-surface-variant font-bold text-sm uppercase tracking-widest">Nueva Lista</p>
+</div>
+</div>
+<!-- Weekly Summary Banner -->
+<div class="mt-12 bg-primary overflow-hidden rounded-3xl relative p-8 text-on-primary shadow-xl">
+<div class="relative z-10">
+<h3 class="text-2xl font-black mb-2 leading-none">Presupuesto Inteligente</h3>
+<p class="text-on-primary/80 font-medium mb-6 max-w-xs">Haz ahorrado un 12% este mes siguiendo tus listas curadas.</p>
+<button class="bg-on-primary text-primary px-6 py-3 rounded-2xl font-bold text-sm shadow-lg active:scale-95 transition-transform">Analizar Gastos</button>
+</div>
+<div class="absolute right-0 top-0 h-full w-1/2 opacity-20 pointer-events-none">
+<img alt="Grocery Pattern" class="object-cover h-full w-full" data-alt="Overhead view of various fresh organic vegetables and fruits arranged artistically on a light surface" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBpIDqARW7ATxBW5F9ktTPhzp5tEG-c3my9FfBbjJQ2lIQ9oz1GM074ppX7hMzSzUqANtR_0Pm_fybHDY6nIDfO9lqarKJvtemK4T6mSMvkmwDWsmVTebB5QyPjEVG1zwoPDH78f3dYUxDuafkVqPENoBfYUJmJcsYuQALUUuCNuY3GBOkQTpItg0kop3vTcuJcvkqjIJnjPZUq6aBq-7PnLCGvN8MA8OtHgu2UGcT3uJbd1oSQtr7KL4VBeGsIfH1_sNSPZK864nVm"/>
+</div>
+</div>
+</main>
+<!-- FAB -->
+<button class="fixed bottom-28 right-6 w-16 h-16 rounded-[1.5rem] bg-gradient-to-br from-[#006b1b] to-[#005d16] text-white shadow-[0px_8px_32px_rgba(0,107,27,0.3)] flex items-center justify-center active:scale-95 transition-all z-40">
+<span class="material-symbols-outlined text-3xl" data-icon="add">add</span>
+</button>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full bg-[#f5f7f5] shadow-[0px_-4px_24px_rgba(0,0,0,0.04)] rounded-t-3xl border-t border-[#006b1b]/5 z-50">
+<div class="flex justify-around items-center px-4 pt-3 pb-8">
+<!-- Active: Lists -->
+<div class="flex flex-col items-center justify-center bg-[#86faac]/30 text-[#006b1b] rounded-2xl px-5 py-2 active:scale-90 transition-all cubic-bezier(0.4,0,0.2,1)">
+<span class="material-symbols-outlined" data-icon="format_list_bulleted" style="font-variation-settings: 'FILL' 1;">format_list_bulleted</span>
+<span class="font-['Inter'] text-[10px] font-bold tracking-wide uppercase mt-1">Lists</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#595c5b] px-5 py-2 hover:text-[#006b1b] active:scale-90 transition-all">
+<span class="material-symbols-outlined" data-icon="shopping_cart">shopping_cart</span>
+<span class="font-['Inter'] text-[10px] font-medium tracking-wide uppercase mt-1">Cart</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#595c5b] px-5 py-2 hover:text-[#006b1b] active:scale-90 transition-all">
+<span class="material-symbols-outlined" data-icon="payments">payments</span>
+<span class="font-['Inter'] text-[10px] font-medium tracking-wide uppercase mt-1">Rates</span>
+</div>
+<div class="flex flex-col items-center justify-center text-[#595c5b] px-5 py-2 hover:text-[#006b1b] active:scale-90 transition-all">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-['Inter'] text-[10px] font-medium tracking-wide uppercase mt-1">Settings</span>
+</div>
+</div>
+</nav>
+</body></html>

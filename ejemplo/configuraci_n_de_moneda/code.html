@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Configuración de Moneda - Market Editor</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary-fixed-variant": "#005c64",
+                    "tertiary-dim": "#005861",
+                    "on-primary": "#d1ffc8",
+                    "primary-fixed-dim": "#83e881",
+                    "outline-variant": "#abaeac",
+                    "surface-bright": "#f5f7f5",
+                    "on-tertiary-fixed": "#003d43",
+                    "secondary-container": "#86faac",
+                    "inverse-primary": "#91f78d",
+                    "on-secondary-fixed": "#004a25",
+                    "tertiary": "#00656f",
+                    "on-primary-fixed-variant": "#00691a",
+                    "inverse-surface": "#0c0f0e",
+                    "surface-container-highest": "#dadedb",
+                    "on-primary-fixed": "#00480f",
+                    "on-primary-container": "#005e16",
+                    "error-dim": "#b92902",
+                    "secondary-fixed-dim": "#78eb9f",
+                    "primary-fixed": "#91f78d",
+                    "on-error": "#ffefec",
+                    "surface-container-lowest": "#ffffff",
+                    "secondary-fixed": "#86faac",
+                    "surface": "#f5f7f5",
+                    "primary": "#006b1b",
+                    "on-secondary-container": "#005f32",
+                    "secondary": "#006a38",
+                    "on-tertiary": "#d4f9ff",
+                    "on-secondary": "#ccffd6",
+                    "on-background": "#2c2f2e",
+                    "primary-container": "#91f78d",
+                    "surface-container-low": "#eff1ef",
+                    "surface-variant": "#dadedb",
+                    "on-secondary-fixed-variant": "#006a38",
+                    "secondary-dim": "#005c30",
+                    "background": "#f5f7f5",
+                    "error-container": "#f95630",
+                    "on-tertiary-container": "#005159",
+                    "tertiary-fixed": "#11eafe",
+                    "surface-dim": "#d1d5d3",
+                    "on-error-container": "#520c00",
+                    "primary-dim": "#005d16",
+                    "error": "#b02500",
+                    "tertiary-fixed-dim": "#00dbee",
+                    "on-surface": "#2c2f2e",
+                    "outline": "#747776",
+                    "on-surface-variant": "#595c5b",
+                    "surface-container-high": "#e0e3e1",
+                    "inverse-on-surface": "#9b9d9c",
+                    "surface-container": "#e6e9e7",
+                    "surface-tint": "#006b1b",
+                    "tertiary-container": "#11eafe"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Inter"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-[#f5f7f5]/80 backdrop-blur-xl shadow-[0px_0px_32px_0px_rgba(44,47,46,0.06)]">
+<div class="flex justify-between items-center px-6 py-4 w-full max-w-screen-xl mx-auto">
+<div class="flex items-center gap-4">
+<button class="text-[#006b1b] active:scale-95 duration-200 hover:bg-[#eff1ef] p-2 rounded-full">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<h1 class="font-['Inter'] text-2xl font-bold tracking-tight text-[#2c2f2e]">Market Editor</h1>
+</div>
+<div class="flex items-center">
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-container">
+<img alt="Editorial User Profile" class="w-full h-full object-cover" data-alt="Professional portrait of a curator in a botanical-themed office with soft natural lighting and plants in the background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCLm8hEhXMjsTKdmXI6cbS80Ix7IUblLzWaY8je3UJczpuDqQEnBPT3BzNy4fO8rdDmujUMEkFq0yhaxQ9nb66K-esNtmTvOEdMvWiIEVgTTUcyGHWVL1cpHk70bZTkojik7nW7pgZ83VfnIl1CtnPKrxACPEMiA7ckbWIuKdogPZxB7tzYdtwXnPj6IHMsFVro-x21Em8I02I73PqxpkydGlBB-0shVnMGrrIgYB7dGhU7PFVa3yojeHi4Ui0ZapPz-zMlj4gjFlQA"/>
+</div>
+</div>
+</div>
+</header>
+<main class="pt-24 px-6 max-w-screen-md mx-auto">
+<!-- Header Section -->
+<section class="mb-8">
+<h2 class="text-[3.5rem] leading-none font-black text-on-surface mb-2 tracking-tighter">Currency</h2>
+<p class="text-on-surface-variant font-medium">Customize your financial perspective and exchange rates.</p>
+</section>
+<!-- Main Configuration Bento -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+<!-- Primary Currency Choice -->
+<div class="bg-surface-container-low p-6 rounded-[24px] flex flex-col justify-between">
+<div>
+<h3 class="text-sm font-bold uppercase tracking-widest text-primary mb-4">Base Currency</h3>
+<div class="flex p-1 bg-surface-container-high rounded-xl">
+<button class="flex-1 py-3 px-4 rounded-lg bg-primary text-on-primary font-bold shadow-sm transition-all">
+                            $ USD
+                        </button>
+<button class="flex-1 py-3 px-4 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container-highest transition-colors">
+                            BS VES
+                        </button>
+</div>
+</div>
+<p class="text-xs text-on-surface-variant mt-4 leading-relaxed">This currency will be used for all primary calculations in your pantry lists.</p>
+</div>
+<!-- Manual Exchange Rate Card -->
+<div class="bg-surface-container-lowest p-6 rounded-[24px] shadow-[0px_4px_24px_rgba(0,0,0,0.02)] border border-surface-container">
+<div class="flex justify-between items-start mb-4">
+<h3 class="text-sm font-bold uppercase tracking-widest text-primary">Exchange Rate</h3>
+<span class="material-symbols-outlined text-primary-dim" data-icon="payments">payments</span>
+</div>
+<div class="relative group">
+<input class="w-full bg-surface-container-low border-none rounded-xl py-4 pl-4 pr-12 text-2xl font-black text-on-surface focus:ring-2 focus:ring-primary-container transition-all" type="text" value="36.45"/>
+<span class="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant font-bold">BS</span>
+</div>
+<div class="mt-4 flex gap-2">
+<button class="flex items-center gap-2 text-xs font-bold text-primary hover:bg-primary-container/20 px-3 py-2 rounded-full transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="sync">sync</span>
+                        FETCH LIVE RATE
+                    </button>
+</div>
+</div>
+</div>
+<!-- Visibility & Layout Settings -->
+<section class="space-y-4">
+<h3 class="text-lg font-bold text-on-surface px-2 mb-2">Display Preferences</h3>
+<!-- Dual Totals Toggle -->
+<div class="group bg-surface-container-low hover:bg-surface-container-high transition-colors p-5 rounded-[24px] flex items-center justify-between cursor-pointer">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-2xl bg-secondary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-secondary-container" data-icon="visibility">visibility</span>
+</div>
+<div>
+<p class="font-bold text-on-surface">Show Dual Totals</p>
+<p class="text-xs text-on-surface-variant">Display both USD and VES at the bottom of lists</p>
+</div>
+</div>
+<div class="w-14 h-8 bg-primary rounded-full relative flex items-center px-1">
+<div class="w-6 h-6 bg-white rounded-full ml-auto shadow-sm"></div>
+</div>
+</div>
+<!-- Itemized Conversion Toggle -->
+<div class="group bg-surface-container-low hover:bg-surface-container-high transition-colors p-5 rounded-[24px] flex items-center justify-between cursor-pointer">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-2xl bg-surface-container-highest flex items-center justify-center">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="currency_exchange">currency_exchange</span>
+</div>
+<div>
+<p class="font-bold text-on-surface">Unit Price Conversion</p>
+<p class="text-xs text-on-surface-variant">Show converted prices on individual item cards</p>
+</div>
+</div>
+<div class="w-14 h-8 bg-surface-dim rounded-full relative flex items-center px-1">
+<div class="w-6 h-6 bg-white rounded-full shadow-sm"></div>
+</div>
+</div>
+<!-- Precision Settings -->
+<div class="bg-surface-container-lowest p-5 rounded-[24px] border border-surface-container-low">
+<div class="flex items-center justify-between mb-4">
+<p class="font-bold text-on-surface">Decimal Precision</p>
+<span class="text-xs font-black bg-primary-container text-on-primary-container px-3 py-1 rounded-full">2 PLACES</span>
+</div>
+<div class="flex gap-2">
+<button class="flex-1 h-2 bg-primary rounded-full"></button>
+<button class="flex-1 h-2 bg-primary rounded-full"></button>
+<button class="flex-1 h-2 bg-surface-container-high rounded-full"></button>
+<button class="flex-1 h-2 bg-surface-container-high rounded-full"></button>
+</div>
+</div>
+</section>
+<!-- Save Indicator -->
+<div class="mt-12 flex justify-center">
+<button class="bg-primary text-on-primary px-8 py-4 rounded-[20px] font-bold shadow-lg flex items-center gap-3 active:scale-95 transition-transform">
+<span class="material-symbols-outlined" data-icon="check_circle">check_circle</span>
+                APPLY ALL CHANGES
+            </button>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full bg-[#f5f7f5] flex justify-around items-center px-4 pt-3 pb-8 shadow-[0px_-4px_24px_rgba(0,0,0,0.04)] rounded-t-3xl border-t border-[#006b1b]/5 z-50">
+<a class="flex flex-col items-center justify-center text-[#595c5b] px-5 py-2 hover:text-[#006b1b] active:scale-90 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="format_list_bulleted">format_list_bulleted</span>
+<span class="font-['Inter'] text-[10px] font-medium tracking-wide uppercase mt-1">Lists</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#595c5b] px-5 py-2 hover:text-[#006b1b] active:scale-90 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="shopping_cart">shopping_cart</span>
+<span class="font-['Inter'] text-[10px] font-medium tracking-wide uppercase mt-1">Cart</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-[#86faac]/30 text-[#006b1b] rounded-2xl px-5 py-2 active:scale-90 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="payments" style="font-variation-settings: 'FILL' 1;">payments</span>
+<span class="font-['Inter'] text-[10px] font-bold tracking-wide uppercase mt-1">Rates</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#595c5b] px-5 py-2 hover:text-[#006b1b] active:scale-90 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-['Inter'] text-[10px] font-medium tracking-wide uppercase mt-1">Settings</span>
+</a>
+</nav>
+</body></html>

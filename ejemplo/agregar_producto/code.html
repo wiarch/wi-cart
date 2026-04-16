@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-tertiary-fixed-variant": "#005c64",
+                    "tertiary-dim": "#005861",
+                    "on-primary": "#d1ffc8",
+                    "primary-fixed-dim": "#83e881",
+                    "outline-variant": "#abaeac",
+                    "surface-bright": "#f5f7f5",
+                    "on-tertiary-fixed": "#003d43",
+                    "secondary-container": "#86faac",
+                    "inverse-primary": "#91f78d",
+                    "on-secondary-fixed": "#004a25",
+                    "tertiary": "#00656f",
+                    "on-primary-fixed-variant": "#00691a",
+                    "inverse-surface": "#0c0f0e",
+                    "surface-container-highest": "#dadedb",
+                    "on-primary-fixed": "#00480f",
+                    "on-primary-container": "#005e16",
+                    "error-dim": "#b92902",
+                    "secondary-fixed-dim": "#78eb9f",
+                    "primary-fixed": "#91f78d",
+                    "on-error": "#ffefec",
+                    "surface-container-lowest": "#ffffff",
+                    "secondary-fixed": "#86faac",
+                    "surface": "#f5f7f5",
+                    "primary": "#006b1b",
+                    "on-secondary-container": "#005f32",
+                    "secondary": "#006a38",
+                    "on-tertiary": "#d4f9ff",
+                    "on-secondary": "#ccffd6",
+                    "on-background": "#2c2f2e",
+                    "primary-container": "#91f78d",
+                    "surface-container-low": "#eff1ef",
+                    "surface-variant": "#dadedb",
+                    "on-secondary-fixed-variant": "#006a38",
+                    "secondary-dim": "#005c30",
+                    "background": "#f5f7f5",
+                    "error-container": "#f95630",
+                    "on-tertiary-container": "#005159",
+                    "tertiary-fixed": "#11eafe",
+                    "surface-dim": "#d1d5d3",
+                    "on-error-container": "#520c00",
+                    "primary-dim": "#005d16",
+                    "error": "#b02500",
+                    "tertiary-fixed-dim": "#00dbee",
+                    "on-surface": "#2c2f2e",
+                    "outline": "#747776",
+                    "on-surface-variant": "#595c5b",
+                    "surface-container-high": "#e0e3e1",
+                    "inverse-on-surface": "#9b9d9c",
+                    "surface-container": "#e6e9e7",
+                    "surface-tint": "#006b1b",
+                    "tertiary-container": "#11eafe"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Inter"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .bg-leaf-gradient {
+            background: linear-gradient(135deg, #006b1b 0%, #005d16 100%);
+        }
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-[#f5f7f5]/80 backdrop-blur-xl shadow-[0px_0px_32px_0px_rgba(44,47,46,0.06)]">
+<div class="flex justify-between items-center px-6 py-4 w-full max-w-screen-xl mx-auto">
+<button class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-[#eff1ef] active:scale-95 duration-200">
+<span class="material-symbols-outlined text-[#006b1b]">arrow_back</span>
+</button>
+<h1 class="font-['Inter'] text-2xl font-bold tracking-tight text-[#2c2f2e]">Market Editor</h1>
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-[#86faac]">
+<img alt="Editorial User Profile" class="w-full h-full object-cover" data-alt="close-up portrait of a professional curator with a friendly expression in a brightly lit modern office" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBQEgm4hXFEFIIP3U1TnwXK7HXuyIeBiy3ZBzrQdReY0DLBFHhEgnv7W63WFoOzwjmTsgZNgeP_fvKqth4Nn_0jplkiWLZ4_Np0bjis1WYsb6CJvFXbegY3Hs5ulA5nnSW1hrBiM-_S0iTTw_2tdaBBf8oelvht3Rbm5M9N3er_UU5foZavtviX88J72c9J4QAZmQbIzbS2lpw7bCgUEik2JI06JLeTK2tUQwY1CuEvmjNdtFJ2muIbevhSX4SlS-QCJ73XVsNzjkk2"/>
+</div>
+</div>
+</header>
+<main class="pt-24 px-6 max-w-2xl mx-auto">
+<!-- Editorial Header Section -->
+<section class="mb-10">
+<span class="text-primary font-bold tracking-widest uppercase text-[10px] block mb-2">Curación de Inventario</span>
+<h2 class="text-4xl md:text-5xl font-black text-on-surface tracking-tighter leading-none mb-4">
+                Nuevo <br/> <span class="text-primary">Producto</span>
+</h2>
+<p class="text-on-surface-variant text-sm max-w-xs leading-relaxed">
+                Define los detalles de tu nueva selección para el catálogo premium.
+            </p>
+</section>
+<!-- Bento Form Layout -->
+<form class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<!-- Photo Autocomplete Card - Primary Action -->
+<div class="md:col-span-2 relative group overflow-hidden bg-secondary-container/30 rounded-[2rem] p-8 border border-secondary-container/50 hover:bg-secondary-container/40 transition-all cursor-pointer">
+<div class="flex flex-col items-center text-center">
+<div class="w-16 h-16 bg-leaf-gradient rounded-full flex items-center justify-center text-on-primary shadow-xl mb-4 group-active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">photo_camera</span>
+</div>
+<h3 class="text-xl font-bold text-on-secondary-container mb-1">Auto-completar con Foto</h3>
+<p class="text-on-secondary-fixed-variant text-xs font-medium">Escanea la etiqueta para extraer datos automáticamente</p>
+</div>
+<div class="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+</div>
+<!-- Field: Name -->
+<div class="md:col-span-2 bg-surface-container-lowest rounded-2xl p-6 shadow-[0px_4px_20px_rgba(0,0,0,0.02)]">
+<label class="block text-[10px] font-bold text-primary uppercase tracking-widest mb-2">Nombre del Producto</label>
+<input class="w-full bg-transparent border-none p-0 text-xl font-medium focus:ring-0 placeholder:text-outline-variant text-on-surface" placeholder="Ej: Aceite de Oliva Extra Virgen" type="text"/>
+</div>
+<!-- Field: Category -->
+<div class="bg-surface-container-low rounded-2xl p-6">
+<label class="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-4">Categoría</label>
+<div class="relative">
+<select class="w-full bg-surface-container-lowest border-none rounded-xl py-3 px-4 text-sm font-medium appearance-none focus:ring-2 focus:ring-primary/20 text-on-surface">
+<option>Frutas y Verduras</option>
+<option>Lácteos y Huevos</option>
+<option>Despensa</option>
+<option>Panadería</option>
+<option>Bebidas</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant">expand_more</span>
+</div>
+</div>
+<!-- Field: Type/Unit -->
+<div class="bg-surface-container-low rounded-2xl p-6">
+<label class="block text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-4">Unidad</label>
+<div class="flex gap-2">
+<button class="flex-1 bg-primary text-on-primary text-xs font-bold py-3 rounded-xl" type="button">kg</button>
+<button class="flex-1 bg-surface-container-lowest text-on-surface-variant text-xs font-bold py-3 rounded-xl border border-outline-variant/10" type="button">unid</button>
+<button class="flex-1 bg-surface-container-lowest text-on-surface-variant text-xs font-bold py-3 rounded-xl border border-outline-variant/10" type="button">litro</button>
+</div>
+</div>
+<!-- Field: Price -->
+<div class="md:col-span-2 bg-surface-container-lowest rounded-2xl p-6 shadow-[0px_4px_20px_rgba(0,0,0,0.02)] flex items-center">
+<div class="flex-1">
+<label class="block text-[10px] font-bold text-primary uppercase tracking-widest mb-2">Precio Estimado</label>
+<div class="flex items-center gap-2">
+<span class="text-2xl font-black text-on-surface">$</span>
+<input class="w-full bg-transparent border-none p-0 text-3xl font-black focus:ring-0 placeholder:text-outline-variant text-on-surface" placeholder="0.00" type="number"/>
+</div>
+</div>
+<div class="bg-surface-container-low px-4 py-2 rounded-full">
+<span class="text-[10px] font-bold text-on-surface-variant uppercase">ARS</span>
+</div>
+</div>
+<!-- Decorative Card -->
+<div class="md:col-span-2 h-32 rounded-3xl overflow-hidden relative mt-4">
+<img alt="Fresh Organic Produce" class="w-full h-full object-cover" data-alt="cinematic close-up of vibrant fresh organic vegetables in a wooden crate with soft natural sunlight and shallow depth of field" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAIxSYXdhF8y6YZNHH5RRGLjSfaNyutz_jtQ6u2Vhy7P2IfVZxSD-pnXp-9s525RThFiO0A3gAshEtnjo7z02SD58yaVPJws7qmzYy5ApxLMrC8AKCO2bdLI25kUpj8_Msr6RyZMpW2B2ZTLLrazZyewm6PXCQ8GnQV9Cmk4sos5HEflZ2X9omppJOe6fQX17h4W3Py49p1MhXaXM9eMP5Rs03vcFoJ-fJoj6sthST0BLv_jCU_7EOkOtfSHXPICsS0Wp3_4pV2y3L5"/>
+<div class="absolute inset-0 bg-gradient-to-t from-on-surface/60 to-transparent flex items-end p-6">
+<p class="text-white text-xs font-medium italic opacity-90">"La frescura es la firma de nuestro editor."</p>
+</div>
+</div>
+<!-- Action Button -->
+<div class="md:col-span-2 mt-8">
+<button class="w-full bg-leaf-gradient text-on-primary py-5 rounded-2xl text-lg font-bold shadow-xl active:scale-[0.98] transition-all flex items-center justify-center gap-3" type="submit">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">save</span>
+                    Guardar Producto
+                </button>
+<button class="w-full mt-4 text-primary font-bold text-sm py-2 hover:bg-primary/5 rounded-xl transition-colors" type="button">
+                    Cancelar
+                </button>
+</div>
+</form>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full flex justify-around items-center px-4 pt-3 pb-8 bg-[#f5f7f5] shadow-[0px_-4px_24px_rgba(0,0,0,0.04)] rounded-t-3xl border-t border-[#006b1b]/5 z-50">
+<a class="flex flex-col items-center justify-center text-[#595c5b] px-5 py-2 hover:text-[#006b1b] active:scale-90 transition-all" href="#">
+<span class="material-symbols-outlined mb-1">format_list_bulleted</span>
+<span class="font-['Inter'] text-[10px] font-medium tracking-wide uppercase">Lists</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-[#86faac]/30 text-[#006b1b] rounded-2xl px-5 py-2 active:scale-90 transition-all" href="#">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">add_circle</span>
+<span class="font-['Inter'] text-[10px] font-medium tracking-wide uppercase">Add</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#595c5b] px-5 py-2 hover:text-[#006b1b] active:scale-90 transition-all" href="#">
+<span class="material-symbols-outlined mb-1">payments</span>
+<span class="font-['Inter'] text-[10px] font-medium tracking-wide uppercase">Rates</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#595c5b] px-5 py-2 hover:text-[#006b1b] active:scale-90 transition-all" href="#">
+<span class="material-symbols-outlined mb-1">settings</span>
+<span class="font-['Inter'] text-[10px] font-medium tracking-wide uppercase">Settings</span>
+</a>
+</nav>
+</body></html>

@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;300;400;500;600;700;800;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary-fixed-variant": "#005c64",
+                        "tertiary-dim": "#005861",
+                        "on-primary": "#d1ffc8",
+                        "primary-fixed-dim": "#83e881",
+                        "outline-variant": "#abaeac",
+                        "surface-bright": "#f5f7f5",
+                        "on-tertiary-fixed": "#003d43",
+                        "secondary-container": "#86faac",
+                        "inverse-primary": "#91f78d",
+                        "on-secondary-fixed": "#004a25",
+                        "tertiary": "#00656f",
+                        "on-primary-fixed-variant": "#00691a",
+                        "inverse-surface": "#0c0f0e",
+                        "surface-container-highest": "#dadedb",
+                        "on-primary-fixed": "#00480f",
+                        "on-primary-container": "#005e16",
+                        "error-dim": "#b92902",
+                        "secondary-fixed-dim": "#78eb9f",
+                        "primary-fixed": "#91f78d",
+                        "on-error": "#ffefec",
+                        "surface-container-lowest": "#ffffff",
+                        "secondary-fixed": "#86faac",
+                        "surface": "#f5f7f5",
+                        "primary": "#006b1b",
+                        "on-secondary-container": "#005f32",
+                        "secondary": "#006a38",
+                        "on-tertiary": "#d4f9ff",
+                        "on-secondary": "#ccffd6",
+                        "on-background": "#2c2f2e",
+                        "primary-container": "#91f78d",
+                        "surface-container-low": "#eff1ef",
+                        "surface-variant": "#dadedb",
+                        "on-secondary-fixed-variant": "#006a38",
+                        "secondary-dim": "#005c30",
+                        "background": "#f5f7f5",
+                        "error-container": "#f95630",
+                        "on-tertiary-container": "#005159",
+                        "tertiary-fixed": "#11eafe",
+                        "surface-dim": "#d1d5d3",
+                        "on-error-container": "#520c00",
+                        "primary-dim": "#005d16",
+                        "error": "#b02500",
+                        "tertiary-fixed-dim": "#00dbee",
+                        "on-surface": "#2c2f2e",
+                        "outline": "#747776",
+                        "on-surface-variant": "#595c5b",
+                        "surface-container-high": "#e0e3e1",
+                        "inverse-on-surface": "#9b9d9c",
+                        "surface-container": "#e6e9e7",
+                        "surface-tint": "#006b1b",
+                        "tertiary-container": "#11eafe"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Inter"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .tonal-shift-bg { background-color: rgba(245, 247, 245, 0.8); }
+        .glass-header { backdrop-filter: blur(20px); }
+        .no-border { border: none !important; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-background min-h-screen pb-40">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-[#f5f7f5]/80 dark:bg-stone-950/80 backdrop-blur-xl shadow-[0px_0px_32px_0px_rgba(44,47,46,0.06)]">
+<div class="flex justify-between items-center px-6 py-4 w-full max-w-screen-xl mx-auto">
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-[#006b1b] dark:text-[#86faac] active:scale-95 duration-200">menu</button>
+<h1 class="font-['Inter'] text-2xl font-bold tracking-tight text-[#2c2f2e] dark:text-[#f5f7f5]">Compra Semanal</h1>
+</div>
+<div class="flex items-center gap-3">
+<button class="material-symbols-outlined text-on-surface-variant hover:bg-[#eff1ef] p-2 rounded-full transition-colors">search</button>
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-container">
+<img alt="Editorial User Profile" data-alt="professional portrait of a creative editor with soft lighting and neutral background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBX5OEzTQxl3Rrd4TP5nKwaWHim_2mAE-7Rm0kKMtwJ3CqwrZU9-JC3_2KOsWrXn99b31QeV4s71ht0TGLd6jFpsIYfZ1uUK2YjtHwQPhVI6UYkKtkc1Rxrib6MTlHYD89bOQ-nXKdxpBdQwCEpLVnitZ_Cl4ZEvgEQVddyqp9t88UBuTt_TJf8cr3wPdizXXopNd9jeAXFWasTqiQZbP4CvhlvTCSHzeZzqMhgo-S2lRnSUrG3gthOIWCkPhGhm4m5usUlbz6Ix_wR"/>
+</div>
+</div>
+</div>
+</header>
+<main class="pt-24 px-6 max-w-screen-xl mx-auto space-y-10">
+<!-- Bento Summary Hero -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<div class="md:col-span-2 bg-surface-container-lowest p-8 rounded-[2rem] flex flex-col justify-between min-h-[200px] relative overflow-hidden group">
+<div class="z-10">
+<span class="text-primary font-bold tracking-widest uppercase text-[10px]">Estatus de Lista</span>
+<h2 class="text-4xl font-black mt-2 text-on-surface leading-tight">65% Completado</h2>
+<p class="text-on-surface-variant mt-2 max-w-xs">Faltan 8 artículos de tu selección premium.</p>
+</div>
+<div class="absolute right-[-20px] bottom-[-20px] opacity-10 group-hover:scale-110 transition-transform duration-700">
+<span class="material-symbols-outlined text-[12rem]" style="font-variation-settings: 'FILL' 1;">local_mall</span>
+</div>
+<div class="mt-6 flex items-center gap-2">
+<div class="h-2 w-48 bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[65%]"></div>
+</div>
+</div>
+</div>
+<div class="bg-primary text-on-primary p-8 rounded-[2rem] flex flex-col justify-center items-center text-center">
+<span class="material-symbols-outlined text-4xl mb-2">calendar_today</span>
+<span class="text-sm font-medium opacity-80 uppercase tracking-tighter">Próxima Compra</span>
+<span class="text-2xl font-bold mt-1">Sábado, 14</span>
+</div>
+</section>
+<!-- Category: Lácteos -->
+<section class="space-y-4">
+<div class="flex items-baseline gap-4 ml-2">
+<h3 class="text-2xl font-bold text-on-surface">Lácteos</h3>
+<span class="text-on-surface-variant text-sm font-medium">3 artículos</span>
+</div>
+<div class="space-y-2">
+<!-- Checked Item -->
+<div class="bg-surface-dim flex items-center justify-between p-4 rounded-xl transition-all">
+<div class="flex items-center gap-4">
+<div class="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-sm">check</span>
+</div>
+<div>
+<p class="text-on-surface-variant font-medium line-through">Leche Deslactosada</p>
+<p class="text-[10px] text-on-surface-variant/60 uppercase font-bold">1 Litro • Premium Grade</p>
+</div>
+</div>
+<div class="bg-secondary-container px-3 py-1 rounded-full">
+<span class="text-[12px] font-bold text-on-secondary-container">$ 2.50</span>
+</div>
+</div>
+<!-- Unchecked Items -->
+<div class="bg-surface-container-lowest flex items-center justify-between p-4 rounded-xl hover:bg-white/50 transition-all border border-transparent active:scale-[0.98]">
+<div class="flex items-center gap-4">
+<div class="w-6 h-6 rounded-full border-2 border-outline-variant"></div>
+<div>
+<p class="text-on-surface font-semibold text-lg">Queso Manchego</p>
+<p class="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">500g • Artesanal</p>
+</div>
+</div>
+<div class="bg-secondary-container px-3 py-1 rounded-full">
+<span class="text-[12px] font-bold text-on-secondary-container">$ 8.20</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest flex items-center justify-between p-4 rounded-xl hover:bg-white/50 transition-all border border-transparent active:scale-[0.98]">
+<div class="flex items-center gap-4">
+<div class="w-6 h-6 rounded-full border-2 border-outline-variant"></div>
+<div>
+<p class="text-on-surface font-semibold text-lg">Yogurt Griego Natural</p>
+<p class="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">Pack de 4 • Sin Azúcar</p>
+</div>
+</div>
+<div class="bg-secondary-container px-3 py-1 rounded-full">
+<span class="text-[12px] font-bold text-on-secondary-container">$ 4.15</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Category: Frutas -->
+<section class="space-y-4">
+<div class="flex items-baseline gap-4 ml-6">
+<h3 class="text-2xl font-bold text-on-surface">Frutas</h3>
+<span class="text-on-surface-variant text-sm font-medium">2 artículos</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="bg-surface-container-lowest p-6 rounded-[1.5rem] relative overflow-hidden flex flex-col justify-between h-40">
+<div class="flex justify-between items-start">
+<div class="w-8 h-8 rounded-full border-2 border-outline-variant"></div>
+<div class="bg-secondary-container px-3 py-1 rounded-full z-10">
+<span class="text-[12px] font-bold text-on-secondary-container">$ 3.40</span>
+</div>
+</div>
+<div>
+<p class="text-xl font-bold text-on-surface">Manzanas Orgánicas</p>
+<p class="text-[10px] text-on-surface-variant uppercase font-black">1.5 kg • Red Delicious</p>
+</div>
+<div class="absolute right-[-15%] top-[-10%] opacity-5">
+<span class="material-symbols-outlined text-[8rem]">nutrition</span>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-6 rounded-[1.5rem] relative overflow-hidden flex flex-col justify-between h-40">
+<div class="flex justify-between items-start">
+<div class="w-8 h-8 rounded-full border-2 border-outline-variant"></div>
+<div class="bg-secondary-container px-3 py-1 rounded-full z-10">
+<span class="text-[12px] font-bold text-on-secondary-container">$ 2.10</span>
+</div>
+</div>
+<div>
+<p class="text-xl font-bold text-on-surface">Bananas Maduras</p>
+<p class="text-[10px] text-on-surface-variant uppercase font-black">1 kg • Cavendish</p>
+</div>
+<div class="absolute right-[-10%] bottom-[-20%] opacity-5">
+<span class="material-symbols-outlined text-[6rem]">eco</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Category: Limpieza -->
+<section class="space-y-4">
+<div class="flex items-baseline gap-4 ml-2">
+<h3 class="text-2xl font-bold text-on-surface">Limpieza</h3>
+<span class="text-on-surface-variant text-sm font-medium">1 artículo</span>
+</div>
+<div class="bg-surface-container-lowest flex items-center justify-between p-4 rounded-xl border-l-4 border-primary/20">
+<div class="flex items-center gap-4">
+<div class="w-6 h-6 rounded-full border-2 border-outline-variant"></div>
+<div>
+<p class="text-on-surface font-semibold text-lg">Detergente Líquido</p>
+<p class="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider">3 Litros • Aroma Fresco</p>
+</div>
+</div>
+<div class="bg-secondary-container px-3 py-1 rounded-full">
+<span class="text-[12px] font-bold text-on-secondary-container">$ 12.80</span>
+</div>
+</div>
+</section>
+</main>
+<!-- Total Sticky Bar -->
+<div class="fixed bottom-[96px] left-0 w-full px-4 z-40">
+<div class="max-w-screen-xl mx-auto bg-surface/90 backdrop-blur-xl border border-primary/10 rounded-3xl p-4 shadow-[0px_-8px_32px_rgba(0,0,0,0.08)] flex justify-between items-center">
+<div class="flex flex-col">
+<span class="text-[10px] font-bold uppercase text-on-surface-variant tracking-widest">Total Estimado</span>
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-black text-on-surface">$ 33.30</span>
+<span class="text-on-surface-variant text-xs">/ BS 1,215</span>
+</div>
+</div>
+<div class="flex bg-surface-container-high p-1 rounded-xl">
+<button class="px-4 py-2 bg-primary text-on-primary rounded-lg text-xs font-bold transition-all shadow-sm">USD</button>
+<button class="px-4 py-2 text-on-surface-variant text-xs font-bold hover:bg-surface transition-all rounded-lg">BS</button>
+</div>
+</div>
+</div>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 bg-[#f5f7f5] dark:bg-stone-950 shadow-[0px_-4px_24px_rgba(0,0,0,0.04)] rounded-t-3xl border-t border-[#006b1b]/5 px-4 pt-3 pb-8 flex justify-around items-center">
+<a class="flex flex-col items-center justify-center bg-[#86faac]/30 dark:bg-[#006b1b]/20 text-[#006b1b] dark:text-[#86faac] rounded-2xl px-5 py-2 active:scale-90 transition-all cubic-bezier(0.4,0,0.2,1)" href="#">
+<span class="material-symbols-outlined mb-1">format_list_bulleted</span>
+<span class="font-['Inter'] text-[10px] font-medium tracking-wide uppercase">Lists</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#595c5b] dark:text-stone-500 px-5 py-2 hover:text-[#006b1b] dark:hover:text-[#86faac] active:scale-90 transition-all" href="#">
+<span class="material-symbols-outlined mb-1">shopping_cart</span>
+<span class="font-['Inter'] text-[10px] font-medium tracking-wide uppercase">Cart</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#595c5b] dark:text-stone-500 px-5 py-2 hover:text-[#006b1b] dark:hover:text-[#86faac] active:scale-90 transition-all" href="#">
+<span class="material-symbols-outlined mb-1">payments</span>
+<span class="font-['Inter'] text-[10px] font-medium tracking-wide uppercase">Rates</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#595c5b] dark:text-stone-500 px-5 py-2 hover:text-[#006b1b] dark:hover:text-[#86faac] active:scale-90 transition-all" href="#">
+<span class="material-symbols-outlined mb-1">settings</span>
+<span class="font-['Inter'] text-[10px] font-medium tracking-wide uppercase">Settings</span>
+</a>
+</nav>
+<!-- Contextual FAB - Add Item (Hidden on details by instruction but fits botanical editor vibe for main lists) -->
+<button class="fixed bottom-32 right-6 w-16 h-16 rounded-[2rem] bg-gradient-to-br from-primary to-primary-dim text-on-primary shadow-2xl flex items-center justify-center active:scale-90 transition-transform z-50">
+<span class="material-symbols-outlined text-3xl">add</span>
+</button>
+</body></html>
