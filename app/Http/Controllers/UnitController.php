@@ -3,69 +3,76 @@
 namespace App\Http\Controllers;
 
 use App\Models\Unit;
+use App\Support\TableActions;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 use Yajra\DataTables\Facades\DataTables;
 
 class UnitController extends Controller
 {
-    public function index()
+    public function index(): View
     {
         return view('units.index');
     }
 
-    public function getData()
+    public function getData(Request $request)
     {
-        $units = Unit::query();
+        $units = Unit::query()->where('user_id', $request->user()->id);
 
         return DataTables::of($units)
             ->addColumn('actions', function ($unit) {
-                return '
-                    <div class="flex justify-center items-center gap-2">
-                        <a href="' . route('units.edit', $unit) . '" class="p-2 rounded-xl hover:bg-surface-container-high transition-colors no-underline">
-                            <i class="fa-solid fa-pen-to-square text-primary-important"></i>
-                        </a>
-                        <button type="button" onclick="confirmDelete(\'delete-form-' . $unit->id . '\', \'¿Deseas eliminar la unidad ' . $unit->name . '?\')" class="p-2 rounded-xl hover:bg-error/10 transition-colors border-none bg-transparent cursor-pointer">
-                            <i class="fa-solid fa-trash-can text-error-important"></i>
-                        </button>
-                        <form id="delete-form-' . $unit->id . '" action="' . route('units.destroy', $unit) . '" method="POST" class="hidden">
-                            ' . csrf_field() . '
-                            ' . method_field('DELETE') . '
-                        </form>
-                    </div>';
+                return TableActions::crud('unit', $unit->id, $unit->name);
             })
             ->rawColumns(['actions'])
             ->make(true);
     }
 
-    public function create()
+    public function show(Request $request, Unit $unit): JsonResponse
     {
-        return view('units.create');
+        $this->authorizeOwner($request, $unit);
+
+        return response()->json(['data' => $unit]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
-        $request->validate(['name' => 'required|string|max:255']);
-        Unit::create($request->all());
+        $validated = $request->validate(['name' => 'required|string|max:255']);
 
-        return redirect()->route('units.index')->with('status', 'Unidad de medida creada con éxito.');
+        $unit = Unit::create([
+            ...$validated,
+            'user_id' => $request->user()->id,
+        ]);
+
+        return response()->json([
+            'message' => 'Unidad creada.',
+            'data' => $unit,
+        ], 201);
     }
 
-    public function edit(Unit $unit)
+    public function update(Request $request, Unit $unit): JsonResponse
     {
-        return view('units.edit', compact('unit'));
+        $this->authorizeOwner($request, $unit);
+
+        $validated = $request->validate(['name' => 'required|string|max:255']);
+        $unit->update($validated);
+
+        return response()->json([
+            'message' => 'Unidad actualizada.',
+            'data' => $unit,
+        ]);
     }
 
-    public function update(Request $request, Unit $unit)
+    public function destroy(Request $request, Unit $unit): JsonResponse
     {
-        $request->validate(['name' => 'required|string|max:255']);
-        $unit->update($request->all());
-
-        return redirect()->route('units.index')->with('status', 'Unidad de medida actualizada con éxito.');
-    }
-
-    public function destroy(Unit $unit)
-    {
+        $this->authorizeOwner($request, $unit);
         $unit->delete();
-        return redirect()->route('units.index')->with('status', 'Unidad de medida eliminada con éxito.');
+
+        return response()->json(['message' => 'Unidad eliminada.']);
+    }
+
+    private function authorizeOwner(Request $request, Unit $unit): void
+    {
+        abort_if($unit->user_id !== $request->user()->id, 403);
     }
 }

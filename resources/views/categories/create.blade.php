@@ -1,26 +1,25 @@
 @extends('layouts.app')
 
-@section('title', 'Nueva Categoría - List Market')
-@section('category', 'GESTIÓN DE SISTEMA')
-@section('header_title', 'Nueva Categoría')
-@section('header_description', 'Crea una nueva clasificación para tus productos.')
+@section('title', 'Nueva categoría - Wi Cart')
+@section('header_title', 'Nueva categoría')
+@section('header_description', 'Crea una clasificación para tus productos.')
 
 @section('content')
     <div class="max-w-2xl mx-auto">
         <div class="mb-6">
-            <a href="{{ route('categories.index') }}" class="inline-flex items-center gap-2 text-sm font-black text-on-surface-variant hover:text-primary transition-colors no-underline uppercase tracking-widest">
+            <a href="{{ route('categories.index') }}" class="btn-secondary no-underline text-sm mb-4 inline-flex">
                 <i class="fa-solid fa-arrow-left"></i>
-                Volver al listado
+                Volver
             </a>
         </div>
 
-        <div class="botanical-card p-6 sm:p-10">
-            <form action="{{ route('categories.store') }}" method="POST" class="space-y-8">
+        <div class="web-card max-w-2xl mx-auto">
+            <form action="{{ route('categories.store') }}" method="POST" class="space-y-6">
                 @csrf
 
                 <div>
-                    <label for="name" class="block font-bold text-[11px] text-primary uppercase tracking-widest mb-3">Nombre de la Categoría</label>
-                    <input id="name" class="botanical-input" type="text" name="name" value="{{ old('name') }}" required autofocus placeholder="Ej: Lácteos, Frutas, Limpieza..." />
+                    <label for="name" class="web-label">Nombre de la categoría</label>
+                    <input id="name" class="web-input" type="text" name="name" value="{{ old('name') }}" required autofocus placeholder="Ej: Lácteos, Frutas, Limpieza..." />
                     @if ($errors->get('name'))
                         <ul class="text-xs text-error font-bold space-y-1 mt-3 list-none p-0">
                             @foreach ((array) $errors->get('name') as $message)
@@ -31,8 +30,8 @@
                 </div>
 
                 <div class="pt-4">
-                    <button type="submit" class="btn-botanical w-full border-none">
-                        Guardar Categoría
+                    <button type="submit" class="btn-primary w-full">
+                        Guardar categoría
                     </button>
                 </div>
             </form>

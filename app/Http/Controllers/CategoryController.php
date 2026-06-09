@@ -3,69 +3,76 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Support\TableActions;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 use Yajra\DataTables\Facades\DataTables;
 
 class CategoryController extends Controller
 {
-    public function index()
+    public function index(): View
     {
         return view('categories.index');
     }
 
-    public function getData()
+    public function getData(Request $request)
     {
-        $categories = Category::query();
+        $categories = Category::query()->where('user_id', $request->user()->id);
 
         return DataTables::of($categories)
             ->addColumn('actions', function ($category) {
-                return '
-                    <div class="flex justify-center items-center gap-2">
-                        <a href="' . route('categories.edit', $category) . '" class="p-2 rounded-xl hover:bg-surface-container-high transition-colors no-underline">
-                            <i class="fa-solid fa-pen-to-square text-primary-important"></i>
-                        </a>
-                        <button type="button" onclick="confirmDelete(\'delete-form-' . $category->id . '\', \'¿Deseas eliminar la categoría ' . $category->name . '?\')" class="p-2 rounded-xl hover:bg-error/10 transition-colors border-none bg-transparent cursor-pointer">
-                            <i class="fa-solid fa-trash-can text-error-important"></i>
-                        </button>
-                        <form id="delete-form-' . $category->id . '" action="' . route('categories.destroy', $category) . '" method="POST" class="hidden">
-                            ' . csrf_field() . '
-                            ' . method_field('DELETE') . '
-                        </form>
-                    </div>';
+                return TableActions::crud('category', $category->id, $category->name);
             })
             ->rawColumns(['actions'])
             ->make(true);
     }
 
-    public function create()
+    public function show(Request $request, Category $category): JsonResponse
     {
-        return view('categories.create');
+        $this->authorizeOwner($request, $category);
+
+        return response()->json(['data' => $category]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
-        $request->validate(['name' => 'required|string|max:255']);
-        Category::create($request->all());
+        $validated = $request->validate(['name' => 'required|string|max:255']);
 
-        return redirect()->route('categories.index')->with('status', 'Categoría creada con éxito.');
+        $category = Category::create([
+            ...$validated,
+            'user_id' => $request->user()->id,
+        ]);
+
+        return response()->json([
+            'message' => 'Categoría creada.',
+            'data' => $category,
+        ], 201);
     }
 
-    public function edit(Category $category)
+    public function update(Request $request, Category $category): JsonResponse
     {
-        return view('categories.edit', compact('category'));
+        $this->authorizeOwner($request, $category);
+
+        $validated = $request->validate(['name' => 'required|string|max:255']);
+        $category->update($validated);
+
+        return response()->json([
+            'message' => 'Categoría actualizada.',
+            'data' => $category,
+        ]);
     }
 
-    public function update(Request $request, Category $category)
+    public function destroy(Request $request, Category $category): JsonResponse
     {
-        $request->validate(['name' => 'required|string|max:255']);
-        $category->update($request->all());
-
-        return redirect()->route('categories.index')->with('status', 'Categoría actualizada con éxito.');
-    }
-
-    public function destroy(Category $category)
-    {
+        $this->authorizeOwner($request, $category);
         $category->delete();
-        return redirect()->route('categories.index')->with('status', 'Categoría eliminada con éxito.');
+
+        return response()->json(['message' => 'Categoría eliminada.']);
+    }
+
+    private function authorizeOwner(Request $request, Category $category): void
+    {
+        abort_if($category->user_id !== $request->user()->id, 403);
     }
 }

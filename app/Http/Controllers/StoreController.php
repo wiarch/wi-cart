@@ -3,69 +3,87 @@
 namespace App\Http\Controllers;
 
 use App\Models\Store;
+use App\Support\TableActions;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 use Yajra\DataTables\Facades\DataTables;
 
 class StoreController extends Controller
 {
-    public function index()
+    public function index(): View
     {
         return view('stores.index');
     }
 
-    public function getData()
+    public function getData(Request $request)
     {
-        $stores = Store::query();
+        $stores = Store::query()->where('user_id', $request->user()->id);
 
         return DataTables::of($stores)
             ->addColumn('actions', function ($store) {
-                return '
-                    <div class="flex justify-center items-center gap-2">
-                        <a href="' . route('stores.edit', $store) . '" class="p-2 rounded-xl hover:bg-surface-container-high transition-colors no-underline">
-                            <i class="fa-solid fa-pen-to-square text-primary-important"></i>
-                        </a>
-                        <button type="button" onclick="confirmDelete(\'delete-form-' . $store->id . '\', \'¿Deseas eliminar el negocio ' . $store->name . '?\')" class="p-2 rounded-xl hover:bg-error/10 transition-colors border-none bg-transparent cursor-pointer">
-                            <i class="fa-solid fa-trash-can text-error-important"></i>
-                        </button>
-                        <form id="delete-form-' . $store->id . '" action="' . route('stores.destroy', $store) . '" method="POST" class="hidden">
-                            ' . csrf_field() . '
-                            ' . method_field('DELETE') . '
-                        </form>
-                    </div>';
+                return TableActions::crud('store', $store->id, $store->name, [
+                    'location' => $store->location ?? '',
+                    'contact' => $store->contact ?? '',
+                ]);
             })
             ->rawColumns(['actions'])
             ->make(true);
     }
 
-    public function create()
+    public function show(Request $request, Store $store): JsonResponse
     {
-        return view('stores.create');
+        $this->authorizeOwner($request, $store);
+
+        return response()->json(['data' => $store]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
-        $request->validate(['name' => 'required|string|max:255']);
-        Store::create($request->all());
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'location' => 'nullable|string|max:255',
+            'contact' => 'nullable|string|max:255',
+        ]);
 
-        return redirect()->route('stores.index')->with('status', 'Negocio creado con éxito.');
+        $store = Store::create([
+            ...$validated,
+            'user_id' => $request->user()->id,
+        ]);
+
+        return response()->json([
+            'message' => 'Negocio creado.',
+            'data' => $store,
+        ], 201);
     }
 
-    public function edit(Store $store)
+    public function update(Request $request, Store $store): JsonResponse
     {
-        return view('stores.edit', compact('store'));
+        $this->authorizeOwner($request, $store);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'location' => 'nullable|string|max:255',
+            'contact' => 'nullable|string|max:255',
+        ]);
+        $store->update($validated);
+
+        return response()->json([
+            'message' => 'Negocio actualizado.',
+            'data' => $store,
+        ]);
     }
 
-    public function update(Request $request, Store $store)
+    public function destroy(Request $request, Store $store): JsonResponse
     {
-        $request->validate(['name' => 'required|string|max:255']);
-        $store->update($request->all());
-
-        return redirect()->route('stores.index')->with('status', 'Negocio actualizado con éxito.');
-    }
-
-    public function destroy(Store $store)
-    {
+        $this->authorizeOwner($request, $store);
         $store->delete();
-        return redirect()->route('stores.index')->with('status', 'Negocio eliminado con éxito.');
+
+        return response()->json(['message' => 'Negocio eliminado.']);
+    }
+
+    private function authorizeOwner(Request $request, Store $store): void
+    {
+        abort_if($store->user_id !== $request->user()->id, 403);
     }
 }
