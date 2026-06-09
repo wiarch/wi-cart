@@ -14,11 +14,11 @@
         </script>
 
         <!-- Local Styles -->
-        <link rel="stylesheet" href="{{ asset('css/tailwind/tailwind.min.css') }}">
-        <link rel="stylesheet" href="{{ asset('css/custom.css') }}">
+        <link rel="stylesheet" href="{{ vasset('css/tailwind/tailwind.min.css') }}">
+        <link rel="stylesheet" href="{{ vasset('css/custom.css') }}">
 
         <!-- Local Scripts -->
-        <script src="{{ asset('js/lib/jquery.min.js') }}"></script>
+        <script src="{{ vasset('js/lib/jquery.min.js') }}"></script>
     </head>
     <body class="bg-surface text-on-surface antialiased overflow-x-hidden transition-colors duration-300">
         <header class="botanical-header fixed top-0 w-full z-40">

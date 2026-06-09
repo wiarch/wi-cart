@@ -15,18 +15,18 @@
 
     <title>@yield('title', 'Wi Cart')</title>
 
-    <link rel="stylesheet" href="{{ asset('css/tailwind/tailwind.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/lib/fontawesome/css/all.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/custom.css') }}">
+    <link rel="stylesheet" href="{{ vasset('css/tailwind/tailwind.min.css') }}">
+    <link rel="stylesheet" href="{{ vasset('css/lib/fontawesome/css/all.min.css') }}">
+    <link rel="stylesheet" href="{{ vasset('css/custom.css') }}">
 
-    <script src="{{ asset('js/lib/jquery.min.js') }}"></script>
-    <script src="{{ asset('js/lib/sweetalert2.all.min.js') }}"></script>
+    <script src="{{ vasset('js/lib/jquery.min.js') }}"></script>
+    <script src="{{ vasset('js/lib/sweetalert2.all.min.js') }}"></script>
 
-    <link rel="stylesheet" href="{{ asset('css/lib/datatables/jquery.dataTables.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/lib/datatables/responsive.dataTables.min.css') }}">
-    <script src="{{ asset('js/lib/datatables/jquery.dataTables.min.js') }}"></script>
-    <script src="{{ asset('js/lib/datatables/dataTables.responsive.min.js') }}"></script>
-    <script src="{{ asset('js/web-datatable.js') }}"></script>
+    <link rel="stylesheet" href="{{ vasset('css/lib/datatables/jquery.dataTables.min.css') }}">
+    <link rel="stylesheet" href="{{ vasset('css/lib/datatables/responsive.dataTables.min.css') }}">
+    <script src="{{ vasset('js/lib/datatables/jquery.dataTables.min.js') }}"></script>
+    <script src="{{ vasset('js/lib/datatables/dataTables.responsive.min.js') }}"></script>
+    <script src="{{ vasset('js/web-datatable.js') }}"></script>
 </head>
 <body>
 @php
@@ -175,8 +175,8 @@
 
 @include('partials.modals')
 
-<script src="{{ asset('js/web-crud.js') }}"></script>
-<script src="{{ asset('js/web-search.js') }}"></script>
+<script src="{{ vasset('js/web-crud.js') }}"></script>
+<script src="{{ vasset('js/web-search.js') }}"></script>
 <script>
     $(function () {
         const app = document.getElementById('web-app');

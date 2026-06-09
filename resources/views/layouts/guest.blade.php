@@ -14,11 +14,11 @@
         }
     </script>
 
-    <link rel="stylesheet" href="{{ asset('css/tailwind/tailwind.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/lib/fontawesome/css/all.min.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/custom.css') }}">
-    <script src="{{ asset('js/lib/jquery.min.js') }}"></script>
-    <script src="{{ asset('js/lib/sweetalert2.all.min.js') }}"></script>
+    <link rel="stylesheet" href="{{ vasset('css/tailwind/tailwind.min.css') }}">
+    <link rel="stylesheet" href="{{ vasset('css/lib/fontawesome/css/all.min.css') }}">
+    <link rel="stylesheet" href="{{ vasset('css/custom.css') }}">
+    <script src="{{ vasset('js/lib/jquery.min.js') }}"></script>
+    <script src="{{ vasset('js/lib/sweetalert2.all.min.js') }}"></script>
 </head>
 <body>
     <div class="auth-shell">
