@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="Wi Cart — Lista de compras y carrito offline-first">
+  <meta name="theme-color" content="#1F6F4A">
+
+  <!-- Android / PWA -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Wi Cart">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+
+  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="manifest" href="manifest.json">
+
+  <title>Wi Cart</title>
+
+  <link rel="stylesheet" href="install.css">
+  <!-- Override APK URL on VPS if needed: -->
+  <!-- <script>window.WICART_APK_URL = 'https://tudominio.com/downloads/wi-cart.apk';</script> -->
+  <script src="install.js" defer></script>
+  <script src="sw-register.js" defer></script>
+</head>
+<body>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

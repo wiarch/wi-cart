@@ -1,0 +1,253 @@
+/* Wi Cart — Android install banner (Material 3 / clean) */
+:root {
+  --wc-bg: #f8f9fa;
+  --wc-surface: #ffffff;
+  --wc-field: #f5f5f7;
+  --wc-primary: #1f6f4a;
+  --wc-on-primary: #ffffff;
+  --wc-text: #1a1c1e;
+  --wc-muted: #5f6368;
+  --wc-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
+  --wc-radius: 16px;
+}
+
+#wc-install-root {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--wc-text);
+  z-index: 2147483000;
+  position: relative;
+}
+
+#wc-install-root[hidden] {
+  display: none !important;
+}
+
+/* Android bottom sheet */
+.wc-banner {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  max-width: 480px;
+  margin: 0 auto;
+  background: var(--wc-surface);
+  border-radius: var(--wc-radius);
+  box-shadow: var(--wc-shadow);
+  padding: 14px 14px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: wc-slide-up 280ms ease-out;
+}
+
+@keyframes wc-slide-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.wc-banner__top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.wc-banner__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  object-fit: cover;
+  background: var(--wc-field);
+  flex-shrink: 0;
+}
+
+.wc-banner__copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.wc-banner__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  line-height: 1.25;
+}
+
+.wc-banner__sub {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  color: var(--wc-muted);
+  line-height: 1.35;
+}
+
+.wc-banner__close {
+  appearance: none;
+  border: 0;
+  background: var(--wc-field);
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  cursor: pointer;
+  color: var(--wc-muted);
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.wc-banner__close:hover {
+  background: #ebebef;
+}
+
+.wc-banner__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.wc-btn {
+  flex: 1;
+  appearance: none;
+  border: 0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.wc-btn--primary {
+  background: var(--wc-primary);
+  color: var(--wc-on-primary);
+}
+
+.wc-btn--primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.wc-btn--secondary {
+  background: var(--wc-field);
+  color: var(--wc-text);
+}
+
+.wc-btn--secondary:hover,
+.wc-btn--primary:hover:not(:disabled) {
+  filter: brightness(0.97);
+}
+
+/* Desktop discreet chip */
+.wc-desktop-chip {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 2147483000;
+  appearance: none;
+  border: 0;
+  background: var(--wc-surface);
+  color: var(--wc-text);
+  box-shadow: var(--wc-shadow);
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wc-desktop-chip img {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+}
+
+.wc-desktop-chip:hover {
+  filter: brightness(0.98);
+}
+
+/* Desktop modal */
+.wc-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(16, 24, 20, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 2147483001;
+}
+
+.wc-modal {
+  background: var(--wc-surface);
+  border-radius: 20px;
+  box-shadow: var(--wc-shadow);
+  width: min(360px, 100%);
+  padding: 22px;
+  text-align: center;
+}
+
+.wc-modal h2 {
+  margin: 0 0 6px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.wc-modal p {
+  margin: 0 0 16px;
+  color: var(--wc-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.wc-qr {
+  width: 168px;
+  height: 168px;
+  margin: 0 auto 16px;
+  border-radius: 12px;
+  background: var(--wc-field);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.wc-qr img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.wc-modal .wc-banner__actions {
+  margin-top: 4px;
+}
+
+.wc-modal__close {
+  margin-top: 12px;
+  background: transparent;
+  border: 0;
+  color: var(--wc-muted);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+@media (min-width: 720px) {
+  .wc-banner {
+    left: auto;
+    right: 20px;
+    bottom: 20px;
+    width: 380px;
+  }
+}
