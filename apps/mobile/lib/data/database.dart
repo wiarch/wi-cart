@@ -84,11 +84,13 @@ class AppDatabase extends _$AppDatabase {
 }
 
 QueryExecutor _open() {
+  // Keep filenames in sync with web/ assets (version bump busts CF cache).
+  const assetVer = String.fromEnvironment('WEB_ASSET_VER', defaultValue: 'd6d7ee1');
   return driftDatabase(
     name: 'wicart',
     web: DriftWebOptions(
-      sqlite3Wasm: Uri.parse('sqlite3.wasm'),
-      driftWorker: Uri.parse('drift_worker.js'),
+      sqlite3Wasm: Uri.parse('sqlite3.$assetVer.wasm'),
+      driftWorker: Uri.parse('drift_worker.$assetVer.js'),
     ),
   );
 }
