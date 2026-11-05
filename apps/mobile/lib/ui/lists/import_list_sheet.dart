@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app_scope.dart';
 import '../../data/database.dart';
 import '../../services/list_import_parser.dart';
+import '../theme/app_theme.dart';
 
 const _newStore = '_new';
 
@@ -22,6 +23,8 @@ class _ImportListSheetState extends State<ImportListSheet> {
   String? _storeChoice;
   String? _error;
   bool _busy = false;
+  int _done = 0;
+  int _total = 0;
 
   @override
   void dispose() {
@@ -43,10 +46,13 @@ class _ImportListSheetState extends State<ImportListSheet> {
     final scope = AppScope.of(context);
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
-    final choice = _storeChoice ?? (stores.isEmpty ? _newStore : stores.first.id);
+    final choice =
+        _storeChoice ?? (stores.isEmpty ? _newStore : stores.first.id);
     setState(() {
       _busy = true;
       _error = null;
+      _done = 0;
+      _total = _lines?.length ?? 0;
     });
     try {
       String? storeId;
@@ -76,7 +82,9 @@ class _ImportListSheetState extends State<ImportListSheet> {
           if (u.abbreviation != null) u.abbreviation!.toLowerCase(): u.id,
       };
 
-      for (final line in _lines!) {
+      final lines = _lines!;
+      for (var i = 0; i < lines.length; i++) {
+        final line = lines[i];
         String? categoryId;
         final category = line.category;
         if (category != null) {
@@ -100,16 +108,27 @@ class _ImportListSheetState extends State<ImportListSheet> {
           unitPrice: line.price,
           notes: line.note,
         );
+        if (mounted) {
+          setState(() => _done = i + 1);
+        }
+        // Yield so the progress UI can paint between heavy writes.
+        await Future<void>.delayed(Duration.zero);
       }
 
       navigator.pop();
       messenger.showSnackBar(
-        SnackBar(content: Text('Importados ${_lines!.length} productos.')),
+        SnackBar(content: Text('Importados ${lines.length} productos.')),
       );
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _done = 0;
+          _total = 0;
+        });
+      }
     }
   }
 
@@ -122,7 +141,7 @@ class _ImportListSheetState extends State<ImportListSheet> {
       child: SizedBox(
         height: MediaQuery.sizeOf(context).height * 0.9,
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
           child: _lines == null ? _input() : _confirm(scope),
         ),
       ),
@@ -149,7 +168,8 @@ class _ImportListSheetState extends State<ImportListSheet> {
         ),
         if (_error != null) ...[
           const SizedBox(height: 8),
-          Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+          Text(_error!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error)),
         ],
         const SizedBox(height: 12),
         FilledButton(onPressed: _analyze, child: const Text('Analizar')),
@@ -159,18 +179,21 @@ class _ImportListSheetState extends State<ImportListSheet> {
 
   Widget _confirm(AppScope scope) {
     final lines = _lines!;
+    final progress = _total == 0 ? 0.0 : _done / _total;
     return StreamBuilder<List<Store>>(
       stream: scope.repo.watchStores(),
       builder: (context, snap) {
         final stores = snap.data ?? const <Store>[];
-        final choice = _storeChoice ?? (stores.isEmpty ? _newStore : stores.first.id);
+        final choice =
+            _storeChoice ?? (stores.isEmpty ? _newStore : stores.first.id);
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Row(
               children: [
                 TextButton(
-                  onPressed: _busy ? null : () => setState(() => _lines = null),
+                  onPressed:
+                      _busy ? null : () => setState(() => _lines = null),
                   child: const Text('Editar texto'),
                 ),
                 const Spacer(),
@@ -179,18 +202,22 @@ class _ImportListSheetState extends State<ImportListSheet> {
             ),
             Expanded(
               child: ListView.builder(
+                padding: const EdgeInsets.only(bottom: 12),
                 itemCount: lines.length,
                 itemBuilder: (_, i) {
                   final l = lines[i];
-                  final showHeader = i == 0 || lines[i - 1].category != l.category;
+                  final showHeader =
+                      i == 0 || lines[i - 1].category != l.category;
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       if (showHeader && l.category != null)
                         Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Text(l.category!,
-                              style: Theme.of(context).textTheme.labelLarge),
+                          padding: const EdgeInsets.only(top: 10, bottom: 2),
+                          child: Text(
+                            l.category!,
+                            style: Theme.of(context).textTheme.labelLarge,
+                          ),
                         ),
                       ListTile(
                         dense: true,
@@ -207,37 +234,116 @@ class _ImportListSheetState extends State<ImportListSheet> {
                 },
               ),
             ),
-            const Divider(),
-            DropdownButtonFormField<String>(
-              initialValue: choice,
-              decoration: const InputDecoration(labelText: 'Tienda'),
-              items: [
-                for (final s in stores)
-                  DropdownMenuItem(value: s.id, child: Text(s.name)),
-                const DropdownMenuItem(value: _newStore, child: Text('Nueva tienda')),
-              ],
-              onChanged: _busy ? null : (v) => setState(() => _storeChoice = v),
-            ),
-            if (choice == _newStore) ...[
-              const SizedBox(height: 8),
-              TextField(
-                controller: _storeName,
-                decoration: const InputDecoration(labelText: 'Nombre de la tienda'),
+            Material(
+              color: AppTheme.card,
+              elevation: 0,
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: AppTheme.card,
+                  border: Border(
+                    top: BorderSide(color: AppTheme.borderSubtle),
+                  ),
+                ),
+                padding: const EdgeInsets.fromLTRB(0, 14, 0, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (_busy) ...[
+                      Text(
+                        _done == 0
+                            ? 'Preparando importación…'
+                            : 'Importando productos… $_done / $_total',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 8),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: LinearProgressIndicator(
+                          value: _done == 0 ? null : progress,
+                          minHeight: 6,
+                          backgroundColor: AppTheme.sage.withValues(alpha: 0.25),
+                          color: AppTheme.ink700,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                    ],
+                    DropdownButtonFormField<String>(
+                      initialValue: choice,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Tienda',
+                        filled: true,
+                        fillColor: AppTheme.field,
+                      ),
+                      items: [
+                        for (final s in stores)
+                          DropdownMenuItem(value: s.id, child: Text(s.name)),
+                        const DropdownMenuItem(
+                          value: _newStore,
+                          child: Text('Nueva tienda'),
+                        ),
+                      ],
+                      onChanged:
+                          _busy ? null : (v) => setState(() => _storeChoice = v),
+                    ),
+                    if (choice == _newStore) ...[
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: _storeName,
+                        enabled: !_busy,
+                        decoration: const InputDecoration(
+                          labelText: 'Nombre de la tienda',
+                          filled: true,
+                          fillColor: AppTheme.field,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: _storeLocation,
+                        enabled: !_busy,
+                        decoration: const InputDecoration(
+                          labelText: 'Ubicación (opcional)',
+                          filled: true,
+                          fillColor: AppTheme.field,
+                        ),
+                      ),
+                    ],
+                    if (_error != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        _error!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 14),
+                    FilledButton(
+                      onPressed: _busy ? null : () => _import(stores),
+                      child: _busy
+                          ? const SizedBox(
+                              height: 22,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppTheme.mint,
+                                    ),
+                                  ),
+                                  SizedBox(width: 10),
+                                  Text('Importando…'),
+                                ],
+                              ),
+                            )
+                          : const Text('Importar'),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _storeLocation,
-                decoration: const InputDecoration(labelText: 'Ubicación (opcional)'),
-              ),
-            ],
-            if (_error != null) ...[
-              const SizedBox(height: 8),
-              Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-            ],
-            const SizedBox(height: 12),
-            FilledButton(
-              onPressed: _busy ? null : () => _import(stores),
-              child: Text(_busy ? 'Importando…' : 'Importar'),
             ),
           ],
         );

@@ -45,7 +45,7 @@ class TotalBanner extends StatelessWidget {
                   cart,
                   style: theme.textTheme.displaySmall?.copyWith(
                     fontWeight: FontWeight.w900,
-                    color: AppTheme.mint,
+                    color: AppTheme.ink700,
                     letterSpacing: -1,
                   ),
                 ),

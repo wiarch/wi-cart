@@ -33,11 +33,18 @@ class ListDetailPage extends StatefulWidget {
 
 class _ListDetailPageState extends State<ListDetailPage> {
   bool _cartExpanded = true;
+  bool _searchOpen = false;
+  bool _cartPulse = false;
   /// Category keys currently expanded. Missing key ⇒ expanded by default.
   final Set<String> _collapsedCats = {};
   /// Category key selected in the filter chips; null ⇒ show all.
   String? _filterKey;
+  /// Item ids playing "fly to cart" / "return" animation.
+  final Set<String> _flyingIds = {};
   final _searchCtrl = TextEditingController();
+  final _searchFocus = FocusNode();
+  final _listScroll = ScrollController();
+  final _cartSectionKey = GlobalKey();
   Map<String, Product> _products = {};
   Map<String, Category> _categories = {};
 
@@ -55,7 +62,43 @@ class _ListDetailPageState extends State<ListDetailPage> {
   @override
   void dispose() {
     _searchCtrl.dispose();
+    _searchFocus.dispose();
+    _listScroll.dispose();
     super.dispose();
+  }
+
+  Future<void> _scrollToCart() async {
+    setState(() => _cartExpanded = true);
+    await Future<void>.delayed(const Duration(milliseconds: 40));
+    if (!mounted) return;
+    final ctx = _cartSectionKey.currentContext;
+    if (ctx == null) return;
+    await Scrollable.ensureVisible(
+      ctx,
+      duration: const Duration(milliseconds: 420),
+      curve: Curves.easeInOutCubic,
+      alignment: 0.08,
+    );
+    if (!mounted) return;
+    setState(() => _cartPulse = true);
+    Future<void>.delayed(const Duration(milliseconds: 700), () {
+      if (mounted) setState(() => _cartPulse = false);
+    });
+  }
+
+  void _toggleSearch() {
+    setState(() {
+      _searchOpen = !_searchOpen;
+      if (!_searchOpen) {
+        _searchCtrl.clear();
+        _searchFocus.unfocus();
+      }
+    });
+    if (_searchOpen) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _searchFocus.requestFocus();
+      });
+    }
   }
 
   @override
@@ -147,27 +190,26 @@ class _ListDetailPageState extends State<ListDetailPage> {
             title: Text(widget.listName),
             actions: [
               IconButton(
-                tooltip: 'Gastos por categoría',
-                icon: const Icon(Icons.pie_chart_outline),
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ListSpendPage(
-                      listId: widget.listId,
-                      listName: widget.listName,
-                    ),
-                  ),
-                ),
-              ),
-              IconButton(
-                tooltip: 'Limpiar carrito',
-                icon: const Icon(Icons.remove_shopping_cart_outlined),
-                onPressed: () => _clearCart(context),
+                tooltip: _searchOpen ? 'Cerrar búsqueda' : 'Buscar',
+                icon: Icon(_searchOpen ? Icons.search_off : Icons.search),
+                onPressed: _toggleSearch,
               ),
               PopupMenuButton<String>(
                 onSelected: (v) async {
                   if (!mounted) return;
-                  if (v == 'clone') {
+                  if (v == 'spend') {
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ListSpendPage(
+                          listId: widget.listId,
+                          listName: widget.listName,
+                        ),
+                      ),
+                    );
+                  } else if (v == 'clear_cart') {
+                    await _clearCart(context);
+                  } else if (v == 'clone') {
                     await _clone(context);
                   } else if (v == 'finalize') {
                     await _finalize(context);
@@ -183,6 +225,23 @@ class _ListDetailPageState extends State<ListDetailPage> {
                   }
                 },
                 itemBuilder: (_) => const [
+                  PopupMenuItem(
+                    value: 'spend',
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.pie_chart_outline),
+                      title: Text('Gastos por categoría'),
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'clear_cart',
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.remove_shopping_cart_outlined),
+                      title: Text('Limpiar carrito'),
+                    ),
+                  ),
+                  PopupMenuDivider(),
                   PopupMenuItem(value: 'clone', child: Text('Clonar lista')),
                   PopupMenuItem(value: 'icon', child: Text('Cambiar icono')),
                   PopupMenuItem(
@@ -198,7 +257,7 @@ class _ListDetailPageState extends State<ListDetailPage> {
             color: AppTheme.surface,
             elevation: 16,
             shadowColor: Colors.black54,
-            padding: const EdgeInsets.symmetric(horizontal: 18),
+            padding: const EdgeInsets.symmetric(horizontal: 10),
             child: Row(
               children: [
                 Expanded(
@@ -209,7 +268,27 @@ class _ListDetailPageState extends State<ListDetailPage> {
                     alignEnd: false,
                   ),
                 ),
-                const SizedBox(width: 72),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: FilledButton.tonal(
+                    onPressed: cart.isEmpty ? null : _scrollToCart,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppTheme.sage.withValues(alpha: 0.35),
+                      foregroundColor: AppTheme.ink700,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 10),
+                      minimumSize: const Size(0, 40),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text(
+                      'Ver carrito',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ),
                 Expanded(
                   child: _TotalBlock(
                     label: 'Total Carrito',
@@ -221,67 +300,87 @@ class _ListDetailPageState extends State<ListDetailPage> {
               ],
             ),
           ),
-          body: ListView(
-            padding: const EdgeInsets.fromLTRB(0, 8, 0, 28),
+          body: Column(
             children: [
-              _ProgressHeader(done: cart.length, total: items.length),
-              SearchField(
-                controller: _searchCtrl,
-                hint: 'Buscar en la lista',
-                onChanged: () => setState(() {}),
-              ),
-              _CategoryFilter(
-                keys: filterKeys,
-                labelFor: (k) => _categoryForKey(k)?.name ?? 'Sin categoría',
-                colorFor: (k) =>
-                    CategoryStyle.parseColor(_categoryForKey(k)?.color) ??
-                    const Color(0xFF9E9E9E),
-                selected: _filterKey,
-                onSelect: (k) => setState(() => _filterKey = k),
-              ),
-              for (final catKey in catKeys)
-                if (_filterKey == null || _filterKey == catKey)
-                  _CategoryAccordion(
-                    category: _categoryForKey(catKey),
-                    allInCat: byCatAll[catKey] ?? const [],
-                    pendingItems: pendingByCat[catKey]!,
-                    expanded: _isCatExpanded(catKey),
-                    onToggle: () => _toggleCat(catKey),
-                    lineCost: _lineCost,
-                    itemBuilder: (item) =>
-                        _itemCard(context, item, inCart: false),
+              if (_searchOpen)
+                Material(
+                  color: AppTheme.surface,
+                  elevation: 1,
+                  child: SearchField(
+                    controller: _searchCtrl,
+                    focusNode: _searchFocus,
+                    autofocus: true,
+                    hint: 'Buscar en la lista',
+                    onChanged: () => setState(() {}),
                   ),
-              _CartSection(
-                count: cart.length,
-                expanded: _cartExpanded,
-                onToggle: () =>
-                    setState(() => _cartExpanded = !_cartExpanded),
-                onDeleteAll: cart.isEmpty
-                    ? null
-                    : () => _deleteCompleted(context, cart),
-                child: !_cartExpanded
-                    ? const SizedBox.shrink()
-                    : visibleCart.isEmpty
-                        ? SoftCard(
-                            padding: const EdgeInsets.all(20),
-                            child: Text(
-                              'Vacío',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
+                ),
+              Expanded(
+                child: ListView(
+                  controller: _listScroll,
+                  padding: const EdgeInsets.fromLTRB(0, 8, 0, 28),
+                  children: [
+                    _ProgressHeader(done: cart.length, total: items.length),
+                    _CategoryFilter(
+                      keys: filterKeys,
+                      labelFor: (k) =>
+                          _categoryForKey(k)?.name ?? 'Sin categoría',
+                      colorFor: (k) =>
+                          CategoryStyle.parseColor(
+                              _categoryForKey(k)?.color) ??
+                          const Color(0xFF9E9E9E),
+                      selected: _filterKey,
+                      onSelect: (k) => setState(() => _filterKey = k),
+                    ),
+                    for (final catKey in catKeys)
+                      if (_filterKey == null || _filterKey == catKey)
+                        _CategoryAccordion(
+                          category: _categoryForKey(catKey),
+                          allInCat: byCatAll[catKey] ?? const [],
+                          pendingItems: pendingByCat[catKey]!,
+                          expanded: _isCatExpanded(catKey),
+                          onToggle: () => _toggleCat(catKey),
+                          lineCost: _lineCost,
+                          itemBuilder: (item) =>
+                              _itemCard(context, item, inCart: false),
+                        ),
+                    KeyedSubtree(
+                      key: _cartSectionKey,
+                      child: _CartSection(
+                        count: cart.length,
+                        expanded: _cartExpanded,
+                        pulse: _cartPulse,
+                        onToggle: () =>
+                            setState(() => _cartExpanded = !_cartExpanded),
+                        onDeleteAll: cart.isEmpty
+                            ? null
+                            : () => _deleteCompleted(context, cart),
+                        child: !_cartExpanded
+                            ? const SizedBox.shrink()
+                            : visibleCart.isEmpty
+                                ? SoftCard(
+                                    padding: const EdgeInsets.all(20),
+                                    child: Text(
+                                      'Vacío',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurfaceVariant,
+                                          ),
+                                    ),
+                                  )
+                                : Column(
+                                    children: [
+                                      for (final item in visibleCart)
+                                        _itemCard(context, item, inCart: true),
+                                    ],
                                   ),
-                            ),
-                          )
-                        : Column(
-                            children: [
-                              for (final item in visibleCart)
-                                _itemCard(context, item, inCart: true),
-                            ],
-                          ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -308,93 +407,212 @@ class _ListDetailPageState extends State<ListDetailPage> {
     final catIcon = CategoryStyle.iconFor(category?.icon);
     final rates = AppScope.of(context).rates;
 
-    final card = SoftCard(
-      padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
-      child: Row(
-        children: [
-          _leading(product?.localImagePath, catColor, catIcon),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    final flying = _flyingIds.contains(item.id);
+    final toCart = !inCart;
+
+    Future<void> toggleCart() async {
+      if (_flyingIds.contains(item.id)) return;
+      final sync = AppScope.of(context).sync;
+      final messenger = ScaffoldMessenger.of(context);
+      setState(() => _flyingIds.add(item.id));
+      await Future<void>.delayed(const Duration(milliseconds: 280));
+      if (!mounted) return;
+      if (toCart) {
+        setState(() {
+          _cartExpanded = true;
+          _cartPulse = true;
+        });
+      }
+      await repo.setItemStatus(item, inCart ? 'pending' : 'in_cart');
+      if (!mounted) return;
+      setState(() => _flyingIds.remove(item.id));
+      if (toCart) {
+        messenger.clearSnackBars();
+        messenger.showSnackBar(
+          SnackBar(
+            content: Row(
               children: [
-                Text(
-                  item.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 15,
-                    letterSpacing: -0.1,
-                    decoration:
-                        inCart ? TextDecoration.lineThrough : TextDecoration.none,
-                    decorationColor: AppTheme.sage,
+                const Icon(Icons.shopping_cart_checkout,
+                    color: AppTheme.mint, size: 18),
+                const SizedBox(width: 10),
+                Expanded(child: Text('${item.name} → carrito')),
+              ],
+            ),
+            duration: const Duration(milliseconds: 1400),
+          ),
+        );
+        Future<void>.delayed(const Duration(milliseconds: 700), () {
+          if (mounted) setState(() => _cartPulse = false);
+        });
+      }
+      await sync.syncNow();
+    }
+
+    return AnimatedSlide(
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeInOutCubic,
+      offset: flying
+          ? (toCart ? const Offset(0, 0.55) : const Offset(0, -0.35))
+          : Offset.zero,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeInOut,
+        opacity: flying ? 0.0 : 1.0,
+        child: AnimatedScale(
+          duration: const Duration(milliseconds: 280),
+          curve: Curves.easeInOut,
+          scale: flying ? 0.92 : 1.0,
+          child: SoftCard(
+            color: inCart ? AppTheme.sage.withValues(alpha: 0.28) : null,
+            padding: const EdgeInsets.fromLTRB(12, 6, 4, 6),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                _leading(
+                  product?.localImagePath,
+                  catColor,
+                  catIcon,
+                  onTap: () => _previewImage(
+                    context,
+                    path: product?.localImagePath,
+                    name: item.name,
+                    color: catColor,
+                    icon: catIcon,
                   ),
                 ),
-                const SizedBox(height: 2),
-                ListenableBuilder(
-                  listenable: rates,
-                  builder: (_, __) => Text(
-                    '$qtyLabel $abbr · ${formatUsd(price)}/${basePriceLabel(item.unitAbbr)}'
-                    '${rates.toBs(price) != null ? ' · ${formatBs(rates.toBs(price)!)}' : ''}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurfaceVariant,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(10),
+                      onTap: toggleCart,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 15,
+                                letterSpacing: -0.1,
+                                color: inCart ? AppTheme.ink800 : null,
+                                decoration: inCart
+                                    ? TextDecoration.lineThrough
+                                    : TextDecoration.none,
+                                decorationColor: AppTheme.ink700,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            ListenableBuilder(
+                              listenable: rates,
+                              builder: (_, __) => Text(
+                                '$qtyLabel $abbr · ${formatUsd(price)}/${basePriceLabel(item.unitAbbr)}'
+                                '${rates.toBs(price) != null ? ' · ${formatBs(rates.toBs(price)!)}' : ''}',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                    ),
+                              ),
+                            ),
+                          ],
                         ),
+                      ),
+                    ),
                   ),
+                ),
+                PopupMenuButton<String>(
+                  tooltip: 'Más',
+                  padding: EdgeInsets.zero,
+                  icon: const Icon(Icons.more_vert, size: 20),
+                  onSelected: (v) async {
+                    if (v == 'edit') {
+                      await _editQty(context, item);
+                      return;
+                    }
+                    if (v == 'delete') {
+                      final sync = AppScope.of(context).sync;
+                      await repo.deleteItem(item.id);
+                      await sync.syncNow();
+                    }
+                  },
+                  itemBuilder: (_) => [
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(Icons.edit_outlined),
+                        title: Text('Editar'),
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(
+                          Icons.delete_outline,
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                        title: Text(
+                          'Eliminar',
+                          style: TextStyle(
+                              color: Theme.of(context).colorScheme.error),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-          IconButton(
-            visualDensity: VisualDensity.compact,
-            tooltip: 'Editar',
-            icon: const Icon(Icons.edit_outlined, size: 20),
-            onPressed: () => _editQty(context, item),
-          ),
-          IconButton(
-            visualDensity: VisualDensity.compact,
-            tooltip: 'Eliminar',
-            icon: Icon(
-              Icons.delete_outline,
-              size: 20,
-              color: Theme.of(context).colorScheme.error.withValues(alpha: 0.85),
-            ),
-            onPressed: () async {
-              final sync = AppScope.of(context).sync;
-              await repo.deleteItem(item.id);
-              await sync.syncNow();
-            },
-          ),
-          Checkbox(
-            value: inCart,
-            onChanged: (_) async {
-              final sync = AppScope.of(context).sync;
-              await repo.setItemStatus(
-                  item, inCart ? 'pending' : 'in_cart');
-              await sync.syncNow();
-            },
-          ),
-        ],
+        ),
       ),
     );
-
-    return Opacity(opacity: inCart ? 0.55 : 1, child: card);
   }
 
-  Widget _leading(String? path, Color color, IconData icon) {
+  Widget _leading(
+    String? path,
+    Color color,
+    IconData icon, {
+    VoidCallback? onTap,
+  }) {
+    Widget thumb;
     if (!kIsWeb && path != null && path.isNotEmpty) {
       try {
         final file = File(path);
         if (file.existsSync()) {
-          return ClipRRect(
+          thumb = ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: Image.file(file, width: 48, height: 48, fit: BoxFit.cover),
           );
+        } else {
+          thumb = _placeholderThumb(color, icon);
         }
-      } catch (_) {}
+      } catch (_) {
+        thumb = _placeholderThumb(color, icon);
+      }
+    } else {
+      thumb = _placeholderThumb(color, icon);
     }
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: thumb,
+      ),
+    );
+  }
+
+  Widget _placeholderThumb(Color color, IconData icon) {
     return Container(
       width: 48,
       height: 48,
@@ -403,6 +621,75 @@ class _ListDetailPageState extends State<ListDetailPage> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Icon(icon, color: color, size: 24),
+    );
+  }
+
+  Future<void> _previewImage(
+    BuildContext context, {
+    required String? path,
+    required String name,
+    required Color color,
+    required IconData icon,
+  }) async {
+    Widget body;
+    if (!kIsWeb && path != null && path.isNotEmpty) {
+      try {
+        final file = File(path);
+        if (file.existsSync()) {
+          body = InteractiveViewer(
+            child: Image.file(file, fit: BoxFit.contain),
+          );
+        } else {
+          body = Icon(icon, size: 96, color: color);
+        }
+      } catch (_) {
+        body = Icon(icon, size: 96, color: color);
+      }
+    } else {
+      body = Icon(icon, size: 96, color: color);
+    }
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: AppTheme.card,
+        insetPadding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 4, 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      name,
+                      style: Theme.of(ctx).textTheme.titleMedium,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+            ),
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(ctx).height * 0.55,
+                maxWidth: MediaQuery.sizeOf(ctx).width,
+              ),
+              child: ColoredBox(
+                color: color.withValues(alpha: 0.08),
+                child: Center(child: body),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
     );
   }
 
@@ -703,6 +990,7 @@ class _CartSection extends StatelessWidget {
   const _CartSection({
     required this.count,
     required this.expanded,
+    required this.pulse,
     required this.onToggle,
     required this.onDeleteAll,
     required this.child,
@@ -710,6 +998,7 @@ class _CartSection extends StatelessWidget {
 
   final int count;
   final bool expanded;
+  final bool pulse;
   final VoidCallback onToggle;
   final VoidCallback? onDeleteAll;
   final Widget child;
@@ -719,10 +1008,29 @@ class _CartSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 12, 8),
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 320),
+          curve: Curves.easeOut,
+          margin: const EdgeInsets.fromLTRB(12, 16, 12, 0),
+          padding: const EdgeInsets.fromLTRB(8, 4, 0, 4),
+          decoration: BoxDecoration(
+            color: pulse
+                ? AppTheme.sage.withValues(alpha: 0.35)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: Row(
             children: [
+              AnimatedScale(
+                duration: const Duration(milliseconds: 280),
+                scale: pulse ? 1.12 : 1.0,
+                child: Icon(
+                  Icons.shopping_cart_outlined,
+                  size: 18,
+                  color: pulse ? AppTheme.ink700 : AppTheme.sage,
+                ),
+              ),
+              const SizedBox(width: 8),
               Text(
                 'En el carrito ($count)',
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -780,7 +1088,7 @@ class _ProgressHeader extends StatelessWidget {
               Text(
                 '$done de $total comprados',
                 style: theme.textTheme.labelMedium?.copyWith(
-                  color: AppTheme.mint,
+                  color: AppTheme.ink700,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -788,7 +1096,7 @@ class _ProgressHeader extends StatelessWidget {
               Text(
                 total == 0 ? '0%' : '${(done * 100 ~/ total)}%',
                 style: theme.textTheme.labelMedium?.copyWith(
-                  color: AppTheme.sage,
+                  color: AppTheme.ink800,
                   fontWeight: FontWeight.w700,
                 ),
               ),

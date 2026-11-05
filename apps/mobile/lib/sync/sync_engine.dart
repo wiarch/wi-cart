@@ -82,11 +82,15 @@ class SyncEngine {
         syncing: false,
         error: e.toString(),
       );
-      _retry?.cancel();
-      _retry = Timer(const Duration(seconds: 60), () => unawaited(syncNow()));
+      _scheduleRetry(const Duration(seconds: 12));
     } finally {
       _running = false;
     }
+  }
+
+  void _scheduleRetry(Duration delay) {
+    _retry?.cancel();
+    _retry = Timer(delay, () => unawaited(syncNow()));
   }
 
   Future<void> _pushPull() async {
@@ -140,6 +144,7 @@ class SyncEngine {
       };
 
   Future<void> _pushEach(List<SyncOutboxData> batch) async {
+    var failed = 0;
     for (final row in batch) {
       try {
         await api.sync(
@@ -148,8 +153,13 @@ class SyncEngine {
         );
         await outbox.remove(row.id);
       } catch (e) {
+        failed++;
         await outbox.bumpAttempt(row.id, _describe(e));
       }
+    }
+    if (failed > 0) {
+      // Back off gently; next connectivity / timer will retry pending rows.
+      _scheduleRetry(Duration(seconds: (8 + failed * 2).clamp(8, 45)));
     }
   }
 

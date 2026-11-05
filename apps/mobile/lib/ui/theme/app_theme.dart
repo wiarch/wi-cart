@@ -14,12 +14,13 @@ class AppTheme {
   static const sage = Color(0xFF8EB69B);
   static const mint = Color(0xFFDAF1DE);
 
-  // Semantic aliases
+  // Semantic aliases — elevated surfaces differ from scaffold mint.
+  static const cream = Color(0xFFF4FBF6);
   static const bg = mint;
-  static const surface = mint;
-  static const card = mint;
-  static const popover = mint;
-  static const field = mint;
+  static const surface = cream;
+  static const card = Color(0xFFFFFFFF);
+  static const popover = Color(0xFFFFFFFF);
+  static const field = cream;
   static const seed = ink700; // primary
   static const textPrimary = ink700;
   static const textSecondary = ink800;

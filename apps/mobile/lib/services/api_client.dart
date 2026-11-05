@@ -67,14 +67,25 @@ class ApiClient {
   }
 
   Future<String?> getUserId() async {
+    final user = await getUser();
+    return user?['id']?.toString();
+  }
+
+  Future<Map<String, dynamic>?> getUser() async {
     final raw = await _storage.read(key: userJsonKey);
     if (raw == null) return null;
     try {
-      final map = jsonDecode(raw) as Map<String, dynamic>;
-      return map['id']?.toString();
+      return jsonDecode(raw) as Map<String, dynamic>;
     } catch (_) {
       return null;
     }
+  }
+
+  Future<String?> getAvatarUrl() async {
+    final user = await getUser();
+    final url = user?['avatar_url']?.toString();
+    if (url == null || url.isEmpty) return null;
+    return url;
   }
 
   /// Bidirectional sync: push mutations + pull delta in one round-trip.

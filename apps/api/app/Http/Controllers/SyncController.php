@@ -9,7 +9,8 @@ use Illuminate\Http\Request;
 
 class SyncController extends Controller
 {
-    private const OP_RULE = 'required|in:create,update,delete,upsert';
+    /** @var list<string> */
+    private const OP_RULE = ['required', 'in:create,update,delete,upsert'];
 
     public function __construct(private readonly SyncService $sync)
     {
@@ -27,7 +28,7 @@ class SyncController extends Controller
             'mutations' => ['nullable', 'array', 'max:500'],
             'mutations.*.entity' => ['required', 'string'],
             'mutations.*.id' => ['required', 'uuid'],
-            'mutations.*.op' => [self::OP_RULE],
+            'mutations.*.op' => self::OP_RULE,
             'mutations.*.client_updated_at' => ['required', 'date'],
             'mutations.*.payload' => ['nullable', 'array'],
         ]);
@@ -64,7 +65,7 @@ class SyncController extends Controller
             'mutations' => ['required', 'array', 'max:500'],
             'mutations.*.entity' => ['required', 'string'],
             'mutations.*.id' => ['required', 'uuid'],
-            'mutations.*.op' => [self::OP_RULE],
+            'mutations.*.op' => self::OP_RULE,
             'mutations.*.client_updated_at' => ['required', 'date'],
             'mutations.*.payload' => ['nullable', 'array'],
         ]);

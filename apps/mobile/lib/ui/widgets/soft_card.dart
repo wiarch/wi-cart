@@ -10,12 +10,14 @@ class SoftCard extends StatelessWidget {
     this.padding,
     this.margin = const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
     this.onTap,
+    this.color,
   });
 
   final Widget child;
   final EdgeInsetsGeometry? padding;
   final EdgeInsetsGeometry margin;
   final VoidCallback? onTap;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +27,7 @@ class SoftCard extends StatelessWidget {
 
     return Container(
       margin: margin,
-      decoration: AppTheme.cardDecoration(),
+      decoration: AppTheme.cardDecoration(color: color),
       clipBehavior: Clip.antiAlias,
       child: onTap == null
           ? content

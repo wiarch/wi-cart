@@ -1,14 +1,14 @@
-/* Wi Cart — Android install banner (Material 3 / clean) */
+/* Wi Cart — entry install modal */
 :root {
   --wc-bg: #daf1de;
   --wc-surface: #daf1de;
-  --wc-field: #daf1de;
+  --wc-field: #e8f6eb;
   --wc-primary: #235347;
   --wc-on-primary: #daf1de;
   --wc-text: #235347;
   --wc-muted: #163832;
-  --wc-shadow: 0 8px 28px rgba(22, 56, 50, 0.14);
-  --wc-radius: 16px;
+  --wc-shadow: 0 16px 40px rgba(22, 56, 50, 0.18);
+  --wc-radius: 20px;
   --wc-border: rgba(142, 182, 155, 0.45);
 }
 
@@ -23,101 +23,105 @@
   display: none !important;
 }
 
-/* Android bottom sheet */
-.wc-banner {
+.wc-modal-backdrop {
   position: fixed;
-  left: 12px;
-  right: 12px;
-  bottom: 12px;
-  max-width: 480px;
-  margin: 0 auto;
-  background: var(--wc-surface);
-  border: 1px solid var(--wc-border);
-  border-radius: var(--wc-radius);
-  box-shadow: var(--wc-shadow);
-  padding: 14px 14px 12px;
+  inset: 0;
+  background: rgba(22, 56, 50, 0.36);
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-  animation: wc-slide-up 280ms ease-out;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 2147483001;
+  animation: wc-fade-in 220ms ease-out;
 }
 
-@keyframes wc-slide-up {
+@keyframes wc-fade-in {
   from {
-    transform: translateY(24px);
     opacity: 0;
   }
   to {
-    transform: translateY(0);
     opacity: 1;
   }
 }
 
-.wc-banner__top {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
+.wc-modal {
+  background: var(--wc-surface);
+  border: 1px solid var(--wc-border);
+  border-radius: var(--wc-radius);
+  box-shadow: var(--wc-shadow);
+  width: min(380px, 100%);
+  padding: 24px 22px 18px;
+  text-align: center;
+  animation: wc-pop 260ms ease-out;
 }
 
-.wc-banner__icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+@keyframes wc-pop {
+  from {
+    transform: translateY(12px) scale(0.98);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.wc-modal__icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
   object-fit: cover;
   background: var(--wc-field);
-  flex-shrink: 0;
+  margin: 0 auto 14px;
+  display: block;
 }
 
-.wc-banner__copy {
-  flex: 1;
-  min-width: 0;
-}
-
-.wc-banner__title {
-  margin: 0;
-  font-size: 15px;
+.wc-modal h2 {
+  margin: 0 0 6px;
+  font-size: 18px;
   font-weight: 700;
   letter-spacing: -0.2px;
-  line-height: 1.25;
+  color: var(--wc-text);
 }
 
-.wc-banner__sub {
-  margin: 4px 0 0;
-  font-size: 12.5px;
+.wc-modal p {
+  margin: 0 0 16px;
   color: var(--wc-muted);
-  line-height: 1.35;
+  font-size: 13.5px;
+  line-height: 1.4;
 }
 
-.wc-banner__close {
-  appearance: none;
-  border: 0;
+.wc-qr {
+  width: 168px;
+  height: 168px;
+  margin: 0 auto 16px;
+  border-radius: 12px;
   background: var(--wc-field);
-  width: 32px;
-  height: 32px;
-  border-radius: 999px;
-  cursor: pointer;
-  color: var(--wc-muted);
-  font-size: 16px;
-  line-height: 1;
-  flex-shrink: 0;
-}
-
-.wc-banner__close:hover {
-  background: var(--wc-field);
-}
-
-.wc-banner__actions {
+  border: 1px solid var(--wc-border);
   display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.wc-qr img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.wc-modal__actions {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
 }
 
 .wc-btn {
-  flex: 1;
   appearance: none;
   border: 0;
   border-radius: 12px;
-  padding: 12px 14px;
-  font-size: 13.5px;
+  padding: 13px 14px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   text-align: center;
@@ -141,98 +145,12 @@
 .wc-btn--secondary {
   background: var(--wc-field);
   color: var(--wc-text);
+  border: 1px solid var(--wc-border);
 }
 
 .wc-btn--secondary:hover,
 .wc-btn--primary:hover:not(:disabled) {
   filter: brightness(0.97);
-}
-
-/* Desktop discreet chip */
-.wc-desktop-chip {
-  position: fixed;
-  top: 12px;
-  right: 12px;
-  z-index: 2147483000;
-  appearance: none;
-  border: 0;
-  background: var(--wc-surface);
-  color: var(--wc-text);
-  box-shadow: var(--wc-shadow);
-  border-radius: 999px;
-  padding: 10px 14px;
-  font-size: 12.5px;
-  font-weight: 600;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.wc-desktop-chip img {
-  width: 20px;
-  height: 20px;
-  border-radius: 5px;
-}
-
-.wc-desktop-chip:hover {
-  filter: brightness(0.98);
-}
-
-/* Desktop modal */
-.wc-modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(22, 56, 50, 0.28);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  z-index: 2147483001;
-}
-
-.wc-modal {
-  background: var(--wc-surface);
-  border-radius: 20px;
-  box-shadow: var(--wc-shadow);
-  width: min(360px, 100%);
-  padding: 22px;
-  text-align: center;
-}
-
-.wc-modal h2 {
-  margin: 0 0 6px;
-  font-size: 18px;
-  font-weight: 700;
-}
-
-.wc-modal p {
-  margin: 0 0 16px;
-  color: var(--wc-muted);
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-.wc-qr {
-  width: 168px;
-  height: 168px;
-  margin: 0 auto 16px;
-  border-radius: 12px;
-  background: var(--wc-field);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.wc-qr img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.wc-modal .wc-banner__actions {
-  margin-top: 4px;
 }
 
 .wc-modal__close {
@@ -243,13 +161,5 @@
   cursor: pointer;
   font-size: 13px;
   font-weight: 600;
-}
-
-@media (min-width: 720px) {
-  .wc-banner {
-    left: auto;
-    right: 20px;
-    bottom: 20px;
-    width: 380px;
-  }
+  padding: 8px;
 }
