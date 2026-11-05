@@ -80,19 +80,33 @@ class _ListDetailPageState extends State<ListDetailPage> {
   }
 
   Future<void> _scrollToCart() async {
-    setState(() => _cartExpanded = true);
-    await Future<void>.delayed(const Duration(milliseconds: 40));
+    setState(() {
+      _cartExpanded = true;
+      _cartPulse = true;
+    });
+    // Wait for expand layout, then jump to cart (always last in ListView).
+    await Future<void>.delayed(const Duration(milliseconds: 50));
     if (!mounted) return;
-    final ctx = _cartSectionKey.currentContext;
-    if (ctx == null) return;
-    await Scrollable.ensureVisible(
-      ctx,
+    await WidgetsBinding.instance.endOfFrame;
+    if (!mounted || !_listScroll.hasClients) return;
+    final target = _listScroll.position.maxScrollExtent;
+    await _listScroll.animateTo(
+      target,
       duration: const Duration(milliseconds: 420),
       curve: Curves.easeInOutCubic,
-      alignment: 0.08,
     );
-    if (!mounted) return;
-    setState(() => _cartPulse = true);
+    // Fallback if already near bottom / extent grew after expand.
+    if (mounted && _listScroll.hasClients) {
+      final ctx = _cartSectionKey.currentContext;
+      if (ctx != null && ctx.mounted) {
+        await Scrollable.ensureVisible(
+          ctx,
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOut,
+          alignment: 0.05,
+        );
+      }
+    }
     Future<void>.delayed(const Duration(milliseconds: 700), () {
       if (mounted) setState(() => _cartPulse = false);
     });
@@ -344,7 +358,7 @@ class _ListDetailPageState extends State<ListDetailPage> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: FilledButton.tonal(
-                    onPressed: cart.isEmpty ? null : _scrollToCart,
+                    onPressed: _scrollToCart,
                     style: FilledButton.styleFrom(
                       backgroundColor: AppTheme.sage.withValues(alpha: 0.35),
                       foregroundColor: AppTheme.ink700,
@@ -353,9 +367,9 @@ class _ListDetailPageState extends State<ListDetailPage> {
                       minimumSize: const Size(0, 40),
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
-                    child: const Text(
-                      'Ver carrito',
-                      style: TextStyle(
+                    child: Text(
+                      cart.isEmpty ? 'Ver carrito' : 'Ver carrito (${cart.length})',
+                      style: const TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 12,
                       ),
