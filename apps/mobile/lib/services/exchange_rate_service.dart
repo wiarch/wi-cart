@@ -8,7 +8,9 @@ class ExchangeRateService extends ChangeNotifier {
 
   static const apiUrl = 'https://bcv.today/api/v1/rate.json';
 
-  static const _kUsd = 'bcv_usd_rate';
+  static const _kUsd = 'bcv_usd_rate'; // legacy: official USD (migrated)
+  static const _kUsdOfficial = 'bcv_usd_official';
+  static const _kUsdManual = 'bcv_usd_manual';
   static const _kEur = 'bcv_eur_rate';
   static const _kFetched = 'bcv_fetched_at';
   static const _kEffective = 'bcv_effective_date';
@@ -16,7 +18,10 @@ class ExchangeRateService extends ChangeNotifier {
 
   final Dio _dio;
 
+  /// Active USD rate: manual override if set, otherwise official BCV.
   double? usdToBs;
+  double? usdOfficial;
+  double? usdManual;
   double? eurToBs;
   DateTime? fetchedAt;
   String? effectiveDate;
@@ -26,12 +31,30 @@ class ExchangeRateService extends ChangeNotifier {
 
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
-    usdToBs = prefs.getDouble(_kUsd);
+    usdOfficial =
+        prefs.getDouble(_kUsdOfficial) ?? prefs.getDouble(_kUsd);
+    usdManual = prefs.getDouble(_kUsdManual);
+    _applyUsd();
     eurToBs = prefs.getDouble(_kEur);
     showEur = prefs.getBool(_kShowEur) ?? false;
     effectiveDate = prefs.getString(_kEffective);
     final raw = prefs.getString(_kFetched);
     if (raw != null) fetchedAt = DateTime.tryParse(raw);
+    notifyListeners();
+  }
+
+  void _applyUsd() => usdToBs = usdManual ?? usdOfficial;
+
+  /// Manual Bs-per-USD override. Pass null to fall back to official BCV.
+  Future<void> setManualUsdToBs(double? value) async {
+    usdManual = (value == null || value <= 0) ? null : value;
+    final prefs = await SharedPreferences.getInstance();
+    if (usdManual == null) {
+      await prefs.remove(_kUsdManual);
+    } else {
+      await prefs.setDouble(_kUsdManual, usdManual!);
+    }
+    _applyUsd();
     notifyListeners();
   }
 
@@ -63,14 +86,15 @@ class ExchangeRateService extends ChangeNotifier {
       if (usd == null || usd <= 0) {
         throw StateError('Respuesta BCV sin USD');
       }
-      usdToBs = usd;
+      usdOfficial = usd;
+      _applyUsd();
       if (eur != null && eur > 0) eurToBs = eur;
       effectiveDate = data['effective_date']?.toString() ??
           data['date']?.toString();
       fetchedAt = DateTime.now().toUtc();
 
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setDouble(_kUsd, usdToBs!);
+      await prefs.setDouble(_kUsdOfficial, usd);
       if (eurToBs != null) await prefs.setDouble(_kEur, eurToBs!);
       if (effectiveDate != null) {
         await prefs.setString(_kEffective, effectiveDate!);

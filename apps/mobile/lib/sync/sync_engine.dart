@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:dio/dio.dart';
 import 'package:drift/drift.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
@@ -82,7 +83,7 @@ class SyncEngine {
         error: e.toString(),
       );
       _retry?.cancel();
-      _retry = Timer(const Duration(seconds: 8), () => unawaited(syncNow()));
+      _retry = Timer(const Duration(seconds: 60), () => unawaited(syncNow()));
     } finally {
       _running = false;
     }
@@ -107,36 +108,63 @@ class SyncEngine {
       return;
     }
 
+    var allOk = true;
     for (var i = 0; i < pending.length; i += batchSize) {
       final batch = pending.skip(i).take(batchSize).toList();
-      final mutations = batch
-          .map((row) => {
-                'entity': row.entity,
-                'id': row.entityId,
-                'op': row.op,
-                'client_updated_at':
-                    row.clientUpdatedAt.toUtc().toIso8601String(),
-                'payload': jsonDecode(row.payloadJson),
-              })
-          .toList();
-
-      // Only attach pull cursor on the last batch to avoid skipping
-      // server writes that happen mid-push.
       final isLast = i + batchSize >= pending.length;
-      final res = await api.sync(
-        deviceId: _deviceId!,
-        mutations: mutations,
-        since: isLast ? since : null,
-      );
-
-      // Clear outbox for this batch regardless of LWW reject —
-      // rejected rows are overwritten by pull changes.
-      await outbox.removeAll(batch.map((r) => r.id));
-
-      if (isLast) {
-        await _applyPull(res);
+      try {
+        final res = await api.sync(
+          deviceId: _deviceId!,
+          mutations: batch.map(_wire).toList(),
+          // Pull cursor only on the last batch, to avoid skipping writes.
+          since: isLast ? since : null,
+        );
+        await outbox.removeAll(batch.map((r) => r.id));
+        if (isLast) await _applyPull(res);
+      } catch (e) {
+        // One bad row fails the whole request. Retry row by row so the
+        // healthy rows still sync and the bad ones keep their error.
+        allOk = false;
+        await _pushEach(batch);
       }
     }
+    if (!allOk) throw StateError('Sincronización parcial: hay filas con error');
+  }
+
+  Map<String, dynamic> _wire(SyncOutboxData row) => {
+        'entity': row.entity,
+        'id': row.entityId,
+        'op': row.op,
+        'client_updated_at': row.clientUpdatedAt.toUtc().toIso8601String(),
+        'payload': jsonDecode(row.payloadJson),
+      };
+
+  Future<void> _pushEach(List<SyncOutboxData> batch) async {
+    for (final row in batch) {
+      try {
+        await api.sync(
+          deviceId: _deviceId!,
+          mutations: [_wire(row)],
+        );
+        await outbox.remove(row.id);
+      } catch (e) {
+        await outbox.bumpAttempt(row.id, _describe(e));
+      }
+    }
+  }
+
+  static String _describe(Object e) {
+    if (e is DioException) {
+      final code = e.response?.statusCode;
+      final body = e.response?.data;
+      final msg = body is Map ? (body['message'] ?? body['error']) : null;
+      return [
+        if (code != null) 'HTTP $code',
+        if (msg != null) msg.toString(),
+        if (msg == null) e.message ?? 'error de red',
+      ].join(': ');
+    }
+    return e.toString();
   }
 
   Future<void> _applyPull(Map<String, dynamic> res) async {
@@ -146,6 +174,7 @@ class SyncEngine {
       await _mergeEntity('categories', changes['categories'], _upsertCategory);
       await _mergeEntity('units', changes['units'], _upsertUnit);
       await _mergeEntity('products', changes['products'], _upsertProduct);
+      await _mergeEntity('stores', changes['stores'], _upsertStore);
       await _mergeEntity(
           'shopping_lists', changes['shopping_lists'], _upsertShoppingList);
       await _mergeEntity('list_items', changes['list_items'], _upsertListItem);
@@ -227,6 +256,10 @@ class SyncEngine {
             ?.clientUpdatedAt;
       case 'products':
         return (await (db.select(db.products)..where((t) => t.id.equals(id)))
+                .getSingleOrNull())
+            ?.clientUpdatedAt;
+      case 'stores':
+        return (await (db.select(db.stores)..where((t) => t.id.equals(id)))
                 .getSingleOrNull())
             ?.clientUpdatedAt;
       case 'shopping_lists':
@@ -311,6 +344,25 @@ class SyncEngine {
         ));
   }
 
+  Future<void> _upsertStore(Map<String, dynamic> m) async {
+    await db.into(db.stores).insertOnConflictUpdate(StoresCompanion(
+          id: Value(m['id'].toString()),
+          userId: Value(m['user_id']?.toString()),
+          deviceId: Value(m['device_id']?.toString()),
+          name: Value(m['name']?.toString() ?? ''),
+          location: Value(m['location']?.toString()),
+          icon: Value(m['icon']?.toString()),
+          notes: Value(m['notes']?.toString()),
+          clientUpdatedAt: Value(
+              _parseDt(m['client_updated_at']) ?? DateTime.now().toUtc()),
+          updatedAt:
+              Value(_parseDt(m['updated_at']) ?? DateTime.now().toUtc()),
+          createdAt:
+              Value(_parseDt(m['created_at']) ?? DateTime.now().toUtc()),
+          deletedAt: Value(_parseDt(m['deleted_at'])),
+        ));
+  }
+
   Future<void> _upsertShoppingList(Map<String, dynamic> m) async {
     await db.into(db.shoppingLists).insertOnConflictUpdate(
           ShoppingListsCompanion(
@@ -320,6 +372,8 @@ class SyncEngine {
             name: Value(m['name']?.toString() ?? ''),
             status: Value(m['status']?.toString() ?? 'active'),
             notes: Value(m['notes']?.toString()),
+            icon: Value(m['icon']?.toString()),
+            storeId: Value(m['store_id']?.toString()),
             storeLocation: Value(m['store_location']?.toString()),
             clientUpdatedAt: Value(
                 _parseDt(m['client_updated_at']) ?? DateTime.now().toUtc()),

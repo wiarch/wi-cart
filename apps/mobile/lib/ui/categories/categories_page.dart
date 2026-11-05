@@ -1,3 +1,5 @@
+import '../widgets/add_fab.dart';
+import '../widgets/app_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -5,104 +7,139 @@ import '../../app_scope.dart';
 import '../../data/database.dart';
 import '../theme/app_theme.dart';
 import '../widgets/category_style.dart';
+import '../widgets/search_field.dart';
 import '../widgets/soft_card.dart';
 import '../widgets/sync_badge.dart';
 
-class CategoriesPage extends StatelessWidget {
-  const CategoriesPage({super.key});
+class CategoriesPage extends StatefulWidget {
+  const CategoriesPage({super.key, this.onLogout, this.embedded = false});
+
+  final VoidCallback? onLogout;
+
+  /// Body only (used inside the Inventario tabs).
+  final bool embedded;
+
+  @override
+  State<CategoriesPage> createState() => CategoriesPageState();
+}
+
+class CategoriesPageState extends State<CategoriesPage> {
+  // Cached: a new stream per build restarts StreamBuilder (spinner flicker).
+  Stream<List<Category>>? _stream;
+  final _search = TextEditingController();
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  void openEditor() => _edit(context);
 
   @override
   Widget build(BuildContext context) {
     final repo = AppScope.of(context).repo;
+    _stream ??= repo.watchCategories();
+    final content = StreamBuilder<List<Category>>(
+      stream: _stream,
+      builder: (context, snap) {
+        final q = searchQuery(_search);
+        final rows = (snap.data ?? [])
+            .where((c) => matchesQuery(q, [c.name]))
+            .toList();
+        if (rows.isEmpty) {
+          return Center(
+            child: Text(
+              'Sin categorías',
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          );
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.fromLTRB(0, 8, 0, 88),
+          itemCount: rows.length,
+          itemBuilder: (context, i) {
+            final c = rows[i];
+            final color = CategoryStyle.parseColor(c.color) ?? Colors.grey;
+            return SoftCard(
+              onTap: () => _edit(context, category: c),
+              padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+              child: Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(CategoryStyle.iconFor(c.icon), color: color),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          c.name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
+                          ),
+                        ),
+                        if (c.color != null)
+                          Text(
+                            c.color!,
+                            style: Theme.of(context).textTheme.labelSmall
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                                ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline),
+                    onPressed: () async {
+                      final sync = AppScope.of(context).sync;
+                      await repo.deleteCategory(c.id);
+                      await sync.syncNow();
+                    },
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+    final body = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SearchField(
+          controller: _search,
+          hint: 'Buscar categoría',
+          onChanged: () => setState(() {}),
+        ),
+        Expanded(child: content),
+      ],
+    );
+    if (widget.embedded) return body;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Categorías'),
-        actions: const [SyncBadge()],
+        actions: [
+          SyncBadge(),
+          AppMenuButton(onLogout: widget.onLogout),
+        ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _edit(context),
-        child: const Icon(Icons.add),
-      ),
-      body: StreamBuilder<List<Category>>(
-        stream: repo.watchCategories(),
-        builder: (context, snap) {
-          final rows = snap.data ?? [];
-          if (rows.isEmpty) {
-            return Center(
-              child: Text(
-                'Sin categorías',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-              ),
-            );
-          }
-          return ListView.builder(
-            padding: const EdgeInsets.fromLTRB(0, 8, 0, 88),
-            itemCount: rows.length,
-            itemBuilder: (context, i) {
-              final c = rows[i];
-              final color =
-                  CategoryStyle.parseColor(c.color) ?? Colors.grey;
-              return SoftCard(
-                onTap: () => _edit(context, category: c),
-                padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Icon(
-                        CategoryStyle.iconFor(c.icon),
-                        color: color,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            c.name,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 15,
-                            ),
-                          ),
-                          if (c.color != null)
-                            Text(
-                              c.color!,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .labelSmall
-                                  ?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
-                                  ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline),
-                      onPressed: () async {
-                        final sync = AppScope.of(context).sync;
-                        await repo.deleteCategory(c.id);
-                        await sync.syncNow();
-                      },
-                    ),
-                  ],
-                ),
-              );
-            },
-          );
-        },
-      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: AddFab(onPressed: () => _edit(context)),
+      body: body,
     );
   }
 
@@ -112,7 +149,8 @@ class CategoriesPage extends StatelessWidget {
     if (!CategoryStyle.icons.containsKey(selectedIcon)) {
       selectedIcon = CategoryStyle.featuredIconKeys.first;
     }
-    var selectedColor = CategoryStyle.normalizeHex(category?.color) ??
+    var selectedColor =
+        CategoryStyle.normalizeHex(category?.color) ??
         CategoryStyle.presetColors.first;
 
     final ok = await showDialog<bool>(
@@ -134,15 +172,13 @@ class CategoriesPage extends StatelessWidget {
                     children: [
                       TextField(
                         controller: name,
-                        autofocus: category == null,
                         decoration: const InputDecoration(
                           labelText: 'Nombre',
                           hintText: 'Ej. Lácteos',
                         ),
                       ),
                       const SizedBox(height: 20),
-                      Text('Icono',
-                          style: Theme.of(ctx).textTheme.titleSmall),
+                      Text('Icono', style: Theme.of(ctx).textTheme.titleSmall),
                       const SizedBox(height: 10),
                       GridView.count(
                         crossAxisCount: 4,
@@ -157,14 +193,12 @@ class CategoriesPage extends StatelessWidget {
                               icon: CategoryStyle.iconFor(key),
                               selected: selectedIcon == key,
                               accent: preview,
-                              onTap: () =>
-                                  setLocal(() => selectedIcon = key),
+                              onTap: () => setLocal(() => selectedIcon = key),
                             ),
                         ],
                       ),
                       const SizedBox(height: 20),
-                      Text('Color',
-                          style: Theme.of(ctx).textTheme.titleSmall),
+                      Text('Color', style: Theme.of(ctx).textTheme.titleSmall),
                       const SizedBox(height: 10),
                       Wrap(
                         spacing: 10,
@@ -174,12 +208,12 @@ class CategoriesPage extends StatelessWidget {
                             _ColorDot(
                               hex: hex,
                               selected: selectedColor == hex,
-                              onTap: () =>
-                                  setLocal(() => selectedColor = hex),
+                              onTap: () => setLocal(() => selectedColor = hex),
                             ),
                           _CustomColorButton(
-                            selected: !CategoryStyle.presetColors
-                                .contains(selectedColor),
+                            selected: !CategoryStyle.presetColors.contains(
+                              selectedColor,
+                            ),
                             color: preview,
                             onTap: () async {
                               final picked = await _pickCustomColor(
@@ -222,7 +256,8 @@ class CategoriesPage extends StatelessWidget {
                                     ? 'Vista previa'
                                     : name.text.trim(),
                                 style: const TextStyle(
-                                    fontWeight: FontWeight.w600),
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
                             Text(
@@ -238,11 +273,13 @@ class CategoriesPage extends StatelessWidget {
               ),
               actions: [
                 TextButton(
-                    onPressed: () => Navigator.pop(ctx, false),
-                    child: const Text('Cancelar')),
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Cancelar'),
+                ),
                 FilledButton(
-                    onPressed: () => Navigator.pop(ctx, true),
-                    child: const Text('Guardar')),
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Guardar'),
+                ),
               ],
             );
           },
@@ -281,8 +318,9 @@ class CategoriesPage extends StatelessWidget {
             void applyHsv(HSVColor next) {
               setLocal(() {
                 hsv = next;
-                hexCtrl.text = CategoryStyle.hexFromColor(next.toColor())
-                    .substring(1);
+                hexCtrl.text = CategoryStyle.hexFromColor(
+                  next.toColor(),
+                ).substring(1);
               });
             }
 
@@ -320,7 +358,8 @@ class CategoriesPage extends StatelessWidget {
                       ),
                       inputFormatters: [
                         FilteringTextInputFormatter.allow(
-                            RegExp(r'[0-9a-fA-F]')),
+                          RegExp(r'[0-9a-fA-F]'),
+                        ),
                         LengthLimitingTextInputFormatter(6),
                       ],
                       onChanged: applyHex,
@@ -330,10 +369,13 @@ class CategoriesPage extends StatelessWidget {
                       label: 'Tono',
                       value: hsv.hue,
                       max: 360,
-                      activeColor:
-                          HSVColor.fromAHSV(1, hsv.hue, 1, 1).toColor(),
-                      onChanged: (v) =>
-                          applyHsv(hsv.withHue(v.clamp(0, 360))),
+                      activeColor: HSVColor.fromAHSV(
+                        1,
+                        hsv.hue,
+                        1,
+                        1,
+                      ).toColor(),
+                      onChanged: (v) => applyHsv(hsv.withHue(v.clamp(0, 360))),
                     ),
                     _SliderRow(
                       label: 'Saturación',
@@ -348,20 +390,21 @@ class CategoriesPage extends StatelessWidget {
                       value: hsv.value,
                       max: 1,
                       activeColor: color,
-                      onChanged: (v) =>
-                          applyHsv(hsv.withValue(v.clamp(0, 1))),
+                      onChanged: (v) => applyHsv(hsv.withValue(v.clamp(0, 1))),
                     ),
                   ],
                 ),
               ),
               actions: [
                 TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text('Cancelar')),
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cancelar'),
+                ),
                 FilledButton(
                   onPressed: () {
-                    final fromHex =
-                        CategoryStyle.normalizeHex('#${hexCtrl.text}');
+                    final fromHex = CategoryStyle.normalizeHex(
+                      '#${hexCtrl.text}',
+                    );
                     Navigator.pop(
                       ctx,
                       fromHex ?? CategoryStyle.hexFromColor(color),
@@ -402,9 +445,7 @@ class _IconCell extends StatelessWidget {
         child: DecoratedBox(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: selected
-                ? Border.all(color: accent, width: 1.5)
-                : null,
+            border: selected ? Border.all(color: accent, width: 1.5) : null,
           ),
           child: Icon(
             icon,
@@ -441,10 +482,7 @@ class _ColorDot extends StatelessWidget {
         decoration: BoxDecoration(
           color: color,
           shape: BoxShape.circle,
-          border: Border.all(
-            width: selected ? 3 : 0,
-            color: Colors.white,
-          ),
+          border: Border.all(width: selected ? 3 : 0, color: Colors.white),
           boxShadow: [
             if (selected)
               BoxShadow(
@@ -498,10 +536,7 @@ class _CustomColorButton extends StatelessWidget {
                 Colors.red,
               ],
             ),
-            border: Border.all(
-              width: selected ? 3 : 0,
-              color: Colors.white,
-            ),
+            border: Border.all(width: selected ? 3 : 0, color: Colors.white),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.08),

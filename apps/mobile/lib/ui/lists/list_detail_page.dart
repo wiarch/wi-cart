@@ -1,14 +1,21 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 import '../../app_scope.dart';
 import '../../data/database.dart';
+import '../../utils/quantity_math.dart';
+import '../../utils/spend_math.dart';
 import '../theme/app_theme.dart';
 import '../widgets/category_style.dart';
 import '../widgets/money_text.dart';
+import '../widgets/search_field.dart';
 import '../widgets/soft_card.dart';
+import '../widgets/add_fab.dart';
+import '../widgets/icon_picker.dart';
 import 'add_item_sheet.dart';
+import 'list_spend_page.dart';
 
 class ListDetailPage extends StatefulWidget {
   const ListDetailPage({
@@ -26,6 +33,11 @@ class ListDetailPage extends StatefulWidget {
 
 class _ListDetailPageState extends State<ListDetailPage> {
   bool _cartExpanded = true;
+  /// Category keys currently expanded. Missing key ⇒ expanded by default.
+  final Set<String> _collapsedCats = {};
+  /// Category key selected in the filter chips; null ⇒ show all.
+  String? _filterKey;
+  final _searchCtrl = TextEditingController();
   Map<String, Product> _products = {};
   Map<String, Category> _categories = {};
 
@@ -38,6 +50,12 @@ class _ListDetailPageState extends State<ListDetailPage> {
       if (!mounted) return;
       await AppScope.of(context).repo.rememberLastList(widget.listId);
     });
+  }
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
   }
 
   @override
@@ -68,11 +86,27 @@ class _ListDetailPageState extends State<ListDetailPage> {
   Category? _categoryForKey(String key) =>
       key == _uncategorizedKey ? null : _categories[key];
 
-  double _lineCost(ListItem i) {
-    final qty =
-        i.status == 'in_cart' ? (i.qtyBought ?? i.qtyPlanned) : i.qtyPlanned;
-    return qty * (i.unitPrice ?? 0);
+  int _compareKeys(String a, String b) {
+    if (a == _uncategorizedKey) return 1;
+    if (b == _uncategorizedKey) return -1;
+    final na = _categoryForKey(a)?.name ?? '';
+    final nb = _categoryForKey(b)?.name ?? '';
+    return na.compareTo(nb);
   }
+
+  bool _isCatExpanded(String key) => !_collapsedCats.contains(key);
+
+  void _toggleCat(String key) {
+    setState(() {
+      if (_collapsedCats.contains(key)) {
+        _collapsedCats.remove(key);
+      } else {
+        _collapsedCats.add(key);
+      }
+    });
+  }
+
+  double _lineCost(ListItem i) => itemCost(i);
 
   @override
   Widget build(BuildContext context) {
@@ -81,7 +115,11 @@ class _ListDetailPageState extends State<ListDetailPage> {
       stream: repo.watchItems(widget.listId),
       builder: (context, snap) {
         final items = snap.data ?? [];
-        final pending = items.where((i) => i.status == 'pending').toList();
+        final query = searchQuery(_searchCtrl);
+        bool matches(ListItem i) => matchesQuery(query, [i.name]);
+        final pending = items
+            .where((i) => i.status == 'pending' && matches(i))
+            .toList();
         final cart = items.where((i) => i.status == 'in_cart').toList();
 
         final listTotal = items.fold<double>(0, (s, i) => s + _lineCost(i));
@@ -95,20 +133,32 @@ class _ListDetailPageState extends State<ListDetailPage> {
         for (final i in pending) {
           pendingByCat.putIfAbsent(_categoryKey(i), () => []).add(i);
         }
-        final catKeys = pendingByCat.keys.toList()
-          ..sort((a, b) {
-            if (a == _uncategorizedKey) return 1;
-            if (b == _uncategorizedKey) return -1;
-            final na = _categoryForKey(a)?.name ?? '';
-            final nb = _categoryForKey(b)?.name ?? '';
-            return na.compareTo(nb);
-          });
+        final catKeys = pendingByCat.keys.toList()..sort(_compareKeys);
+        final filterKeys = byCatAll.keys.toList()..sort(_compareKeys);
+        final visibleCart = cart
+            .where((i) =>
+                (_filterKey == null || _categoryKey(i) == _filterKey) &&
+                matches(i))
+            .toList();
 
         return Scaffold(
           backgroundColor: AppTheme.bg,
           appBar: AppBar(
             title: Text(widget.listName),
             actions: [
+              IconButton(
+                tooltip: 'Gastos por categoría',
+                icon: const Icon(Icons.pie_chart_outline),
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ListSpendPage(
+                      listId: widget.listId,
+                      listName: widget.listName,
+                    ),
+                  ),
+                ),
+              ),
               IconButton(
                 tooltip: 'Limpiar carrito',
                 icon: const Icon(Icons.remove_shopping_cart_outlined),
@@ -121,30 +171,33 @@ class _ListDetailPageState extends State<ListDetailPage> {
                     await _clone(context);
                   } else if (v == 'finalize') {
                     await _finalize(context);
+                  } else if (v == 'icon') {
+                    final list = await repo.getList(widget.listId);
+                    if (!context.mounted) return;
+                    final sync = AppScope.of(context).sync;
+                    final key =
+                        await showIconPicker(context, current: list?.icon);
+                    if (key == null) return;
+                    await repo.setListIcon(widget.listId, key);
+                    await sync.syncNow();
                   }
                 },
                 itemBuilder: (_) => const [
                   PopupMenuItem(value: 'clone', child: Text('Clonar lista')),
+                  PopupMenuItem(value: 'icon', child: Text('Cambiar icono')),
                   PopupMenuItem(
                       value: 'finalize', child: Text('Finalizar compra')),
                 ],
               ),
             ],
           ),
-          floatingActionButtonLocation:
-              FloatingActionButtonLocation.centerDocked,
-          floatingActionButton: FloatingActionButton(
-            onPressed: () => _addItem(context),
-            tooltip: 'Agregar',
-            child: const Icon(Icons.add, size: 28),
-          ),
+          floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+          floatingActionButton: AddFab(onPressed: () => _addItem(context)),
           bottomNavigationBar: BottomAppBar(
-            shape: const CircularNotchedRectangle(),
-            notchMargin: 8,
             height: 78,
-            color: Colors.white,
+            color: AppTheme.surface,
             elevation: 16,
-            shadowColor: Colors.black26,
+            shadowColor: Colors.black54,
             padding: const EdgeInsets.symmetric(horizontal: 18),
             child: Row(
               children: [
@@ -169,139 +222,71 @@ class _ListDetailPageState extends State<ListDetailPage> {
             ),
           ),
           body: ListView(
-            padding: const EdgeInsets.fromLTRB(0, 4, 0, 28),
+            padding: const EdgeInsets.fromLTRB(0, 8, 0, 28),
             children: [
-              for (final catKey in catKeys) ...[
-                _categoryHeader(
-                  context,
-                  _categoryForKey(catKey),
-                  byCatAll[catKey] ?? const [],
-                ),
-                for (final item in pendingByCat[catKey]!)
-                  _itemCard(context, item, inCart: false),
-              ],
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-                child: Row(
-                  children: [
-                    Text(
-                      'En el carrito',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppTheme.field,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        '${cart.length}',
-                        style: Theme.of(context).textTheme.labelSmall,
-                      ),
-                    ),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: () =>
-                          setState(() => _cartExpanded = !_cartExpanded),
-                      child: Text(_cartExpanded ? 'Ocultar' : 'Mostrar'),
-                    ),
-                  ],
-                ),
+              _ProgressHeader(done: cart.length, total: items.length),
+              SearchField(
+                controller: _searchCtrl,
+                hint: 'Buscar en la lista',
+                onChanged: () => setState(() {}),
               ),
-              if (_cartExpanded)
-                if (cart.isEmpty)
-                  SoftCard(
-                    padding: const EdgeInsets.all(20),
-                    child: Text(
-                      'Vacío',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurfaceVariant,
+              _CategoryFilter(
+                keys: filterKeys,
+                labelFor: (k) => _categoryForKey(k)?.name ?? 'Sin categoría',
+                colorFor: (k) =>
+                    CategoryStyle.parseColor(_categoryForKey(k)?.color) ??
+                    const Color(0xFF9E9E9E),
+                selected: _filterKey,
+                onSelect: (k) => setState(() => _filterKey = k),
+              ),
+              for (final catKey in catKeys)
+                if (_filterKey == null || _filterKey == catKey)
+                  _CategoryAccordion(
+                    category: _categoryForKey(catKey),
+                    allInCat: byCatAll[catKey] ?? const [],
+                    pendingItems: pendingByCat[catKey]!,
+                    expanded: _isCatExpanded(catKey),
+                    onToggle: () => _toggleCat(catKey),
+                    lineCost: _lineCost,
+                    itemBuilder: (item) =>
+                        _itemCard(context, item, inCart: false),
+                  ),
+              _CartSection(
+                count: cart.length,
+                expanded: _cartExpanded,
+                onToggle: () =>
+                    setState(() => _cartExpanded = !_cartExpanded),
+                onDeleteAll: cart.isEmpty
+                    ? null
+                    : () => _deleteCompleted(context, cart),
+                child: !_cartExpanded
+                    ? const SizedBox.shrink()
+                    : visibleCart.isEmpty
+                        ? SoftCard(
+                            padding: const EdgeInsets.all(20),
+                            child: Text(
+                              'Vacío',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
+                            ),
+                          )
+                        : Column(
+                            children: [
+                              for (final item in visibleCart)
+                                _itemCard(context, item, inCart: true),
+                            ],
                           ),
-                    ),
-                  )
-                else
-                  for (final item in cart)
-                    _itemCard(context, item, inCart: true),
+              ),
             ],
           ),
         );
       },
-    );
-  }
-
-  Widget _categoryHeader(
-      BuildContext context, Category? category, List<ListItem> allInCat) {
-    final listSum = allInCat.fold<double>(0, (s, i) => s + _lineCost(i));
-    final cartSum = allInCat
-        .where((i) => i.status == 'in_cart')
-        .fold<double>(0, (s, i) => s + _lineCost(i));
-    final name = category?.name ?? 'Sin categoría';
-    final color = CategoryStyle.parseColor(category?.color) ??
-        const Color(0xFF9E9E9E);
-    final icon = CategoryStyle.iconFor(category?.icon);
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 6),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, size: 22, color: color),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.2,
-                      ),
-                ),
-                const SizedBox(height: 2),
-                ListenableBuilder(
-                  listenable: AppScope.of(context).rates,
-                  builder: (context, _) {
-                    final rates = AppScope.of(context).rates;
-                    final listLabel = formatUsd(listSum);
-                    final cartLabel = formatUsd(cartSum);
-                    final bsList = rates.toBs(listSum);
-                    final bsCart = rates.toBs(cartSum);
-                    final extra = StringBuffer(
-                        'Lista: $listLabel · Carrito: $cartLabel');
-                    if (bsList != null && bsCart != null) {
-                      extra.write(
-                          '\n${formatBs(bsList)} · ${formatBs(bsCart)}');
-                    }
-                    return Text(
-                      extra.toString(),
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurfaceVariant,
-                            height: 1.35,
-                          ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -323,7 +308,7 @@ class _ListDetailPageState extends State<ListDetailPage> {
     final catIcon = CategoryStyle.iconFor(category?.icon);
     final rates = AppScope.of(context).rates;
 
-    return SoftCard(
+    final card = SoftCard(
       padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
       child: Row(
         children: [
@@ -337,17 +322,20 @@ class _ListDetailPageState extends State<ListDetailPage> {
                   item.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 15,
                     letterSpacing: -0.1,
+                    decoration:
+                        inCart ? TextDecoration.lineThrough : TextDecoration.none,
+                    decorationColor: AppTheme.sage,
                   ),
                 ),
                 const SizedBox(height: 2),
                 ListenableBuilder(
                   listenable: rates,
                   builder: (_, __) => Text(
-                    '$qtyLabel $abbr · ${formatUsd(price)}'
+                    '$qtyLabel $abbr · ${formatUsd(price)}/${basePriceLabel(item.unitAbbr)}'
                     '${rates.toBs(price) != null ? ' · ${formatBs(rates.toBs(price)!)}' : ''}',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Theme.of(context)
@@ -361,15 +349,17 @@ class _ListDetailPageState extends State<ListDetailPage> {
           ),
           IconButton(
             visualDensity: VisualDensity.compact,
+            tooltip: 'Editar',
             icon: const Icon(Icons.edit_outlined, size: 20),
             onPressed: () => _editQty(context, item),
           ),
           IconButton(
             visualDensity: VisualDensity.compact,
+            tooltip: 'Eliminar',
             icon: Icon(
               Icons.delete_outline,
               size: 20,
-              color: Theme.of(context).colorScheme.error.withValues(alpha: 0.8),
+              color: Theme.of(context).colorScheme.error.withValues(alpha: 0.85),
             ),
             onPressed: () async {
               final sync = AppScope.of(context).sync;
@@ -389,15 +379,21 @@ class _ListDetailPageState extends State<ListDetailPage> {
         ],
       ),
     );
+
+    return Opacity(opacity: inCart ? 0.55 : 1, child: card);
   }
 
   Widget _leading(String? path, Color color, IconData icon) {
-    if (path != null && File(path).existsSync()) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child:
-            Image.file(File(path), width: 48, height: 48, fit: BoxFit.cover),
-      );
+    if (!kIsWeb && path != null && path.isNotEmpty) {
+      try {
+        final file = File(path);
+        if (file.existsSync()) {
+          return ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.file(file, width: 48, height: 48, fit: BoxFit.cover),
+          );
+        }
+      } catch (_) {}
     }
     return Container(
       width: 48,
@@ -433,6 +429,31 @@ class _ListDetailPageState extends State<ListDetailPage> {
     await scope.sync.syncNow();
   }
 
+  Future<void> _deleteCompleted(
+      BuildContext context, List<ListItem> cart) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Eliminar comprados'),
+        content: Text('Elimina ${cart.length} ítems del carrito.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancelar')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Eliminar')),
+        ],
+      ),
+    );
+    if (ok != true || !context.mounted) return;
+    final scope = AppScope.of(context);
+    for (final item in cart) {
+      await scope.repo.deleteItem(item.id);
+    }
+    await scope.sync.syncNow();
+  }
+
   Future<void> _clone(BuildContext context) async {
     final scope = AppScope.of(context);
     final clone = await scope.repo.cloneList(widget.listId);
@@ -449,35 +470,11 @@ class _ListDetailPageState extends State<ListDetailPage> {
 
   Future<void> _finalize(BuildContext context) async {
     final repo = AppScope.of(context).repo;
-    final list = await repo.getList(widget.listId);
-    final storeCtrl =
-        TextEditingController(text: list?.storeLocation ?? '');
-    if (!context.mounted) return;
-
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Finalizar compra'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Confirma la tienda/ubicación del ticket.',
-              style: Theme.of(ctx).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(ctx).colorScheme.onSurfaceVariant,
-                  ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: storeCtrl,
-              autofocus: true,
-              decoration: const InputDecoration(
-                labelText: 'Tienda / ubicación',
-              ),
-            ),
-          ],
-        ),
+        content: const Text('Se guardará el carrito en el historial.'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
@@ -489,16 +486,9 @@ class _ListDetailPageState extends State<ListDetailPage> {
       ),
     );
     if (ok != true || !context.mounted) return;
-    final store = storeCtrl.text.trim();
-    if (store.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Indica la tienda')),
-      );
-      return;
-    }
     try {
       final scope = AppScope.of(context);
-      await repo.finalizePurchase(widget.listId, storeLocation: store);
+      await repo.finalizePurchase(widget.listId);
       await repo.rememberLastList(null);
       await scope.sync.syncNow();
       if (context.mounted) Navigator.pop(context);
@@ -524,6 +514,9 @@ class _ListDetailPageState extends State<ListDetailPage> {
       categoryId: result.categoryId,
       qtyPlanned: result.qty,
       unitPrice: result.unitPrice,
+      description: result.note,
+      localImagePath: result.imagePath,
+      addToCart: result.addToCart,
     );
     await scope.sync.syncNow();
     await _loadLookups();
@@ -575,6 +568,291 @@ class _ListDetailPageState extends State<ListDetailPage> {
       unitPrice: p,
     );
     await scope.sync.syncNow();
+  }
+}
+
+/// Collapsible category block: header bar + animated product list.
+class _CategoryAccordion extends StatelessWidget {
+  const _CategoryAccordion({
+    required this.category,
+    required this.allInCat,
+    required this.pendingItems,
+    required this.expanded,
+    required this.onToggle,
+    required this.lineCost,
+    required this.itemBuilder,
+  });
+
+  final Category? category;
+  final List<ListItem> allInCat;
+  final List<ListItem> pendingItems;
+  final bool expanded;
+  final VoidCallback onToggle;
+  final double Function(ListItem) lineCost;
+  final Widget Function(ListItem) itemBuilder;
+
+  @override
+  Widget build(BuildContext context) {
+    final listSum = allInCat.fold<double>(0, (s, i) => s + lineCost(i));
+    final cartSum = allInCat
+        .where((i) => i.status == 'in_cart')
+        .fold<double>(0, (s, i) => s + lineCost(i));
+    final name = category?.name ?? 'Sin categoría';
+    final color =
+        CategoryStyle.parseColor(category?.color) ?? const Color(0xFF9E9E9E);
+    final icon = CategoryStyle.iconFor(category?.icon);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onToggle,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 12, 6),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(icon, size: 22, color: color),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          name,
+                          style:
+                              Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: -0.2,
+                                  ),
+                        ),
+                        const SizedBox(height: 3),
+                        ListenableBuilder(
+                          listenable: AppScope.of(context).rates,
+                          builder: (context, _) {
+                            final rates = AppScope.of(context).rates;
+                            final bsList = rates.toBs(listSum);
+                            final bsCart = rates.toBs(cartSum);
+                            final line1 =
+                                'Lista: ${formatUsd(listSum)}${bsList != null ? ' (${formatBs(bsList)})' : ''}';
+                            final line2 =
+                                'Carrito: ${formatUsd(cartSum)}${bsCart != null ? ' (${formatBs(bsCart)})' : ''}';
+                            return Text(
+                              '$line1 · $line2',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelSmall
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                    height: 1.35,
+                                  ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: AnimatedRotation(
+                      turns: expanded ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 200),
+                      child: Icon(
+                        Icons.keyboard_arrow_down,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        AnimatedCrossFade(
+          firstChild: Column(
+            children: [
+              for (final item in pendingItems) itemBuilder(item),
+            ],
+          ),
+          secondChild: const SizedBox(width: double.infinity),
+          crossFadeState: expanded
+              ? CrossFadeState.showFirst
+              : CrossFadeState.showSecond,
+          duration: const Duration(milliseconds: 220),
+          sizeCurve: Curves.easeInOut,
+        ),
+      ],
+    );
+  }
+}
+
+class _CartSection extends StatelessWidget {
+  const _CartSection({
+    required this.count,
+    required this.expanded,
+    required this.onToggle,
+    required this.onDeleteAll,
+    required this.child,
+  });
+
+  final int count;
+  final bool expanded;
+  final VoidCallback onToggle;
+  final VoidCallback? onDeleteAll;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 12, 8),
+          child: Row(
+            children: [
+              Text(
+                'En el carrito ($count)',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+              const Spacer(),
+              if (onDeleteAll != null)
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  tooltip: 'Eliminar comprados',
+                  icon: Icon(Icons.delete_sweep_outlined,
+                      size: 20,
+                      color: Theme.of(context).colorScheme.error),
+                  onPressed: onDeleteAll,
+                ),
+              TextButton(
+                onPressed: onToggle,
+                child: Text(expanded ? 'Ocultar' : 'Mostrar'),
+              ),
+            ],
+          ),
+        ),
+        AnimatedCrossFade(
+          firstChild: child,
+          secondChild: const SizedBox(width: double.infinity),
+          crossFadeState: expanded
+              ? CrossFadeState.showFirst
+              : CrossFadeState.showSecond,
+          duration: const Duration(milliseconds: 220),
+          sizeCurve: Curves.easeInOut,
+        ),
+      ],
+    );
+  }
+}
+
+/// "X de Y comprados" with a purple progress bar.
+class _ProgressHeader extends StatelessWidget {
+  const _ProgressHeader({required this.done, required this.total});
+
+  final int done;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Text(
+                '$done de $total comprados',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: AppTheme.mint,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                total == 0 ? '0%' : '${(done * 100 ~/ total)}%',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: AppTheme.sage,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: total == 0 ? 0 : done / total,
+              minHeight: 6,
+              backgroundColor: AppTheme.ink700,
+              valueColor: const AlwaysStoppedAnimation(AppTheme.sage),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Horizontal category chips; tapping the active chip clears the filter.
+class _CategoryFilter extends StatelessWidget {
+  const _CategoryFilter({
+    required this.keys,
+    required this.labelFor,
+    required this.colorFor,
+    required this.selected,
+    required this.onSelect,
+  });
+
+  final List<String> keys;
+  final String Function(String key) labelFor;
+  final Color Function(String key) colorFor;
+  final String? selected;
+  final ValueChanged<String?> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    if (keys.length < 2) return const SizedBox.shrink();
+    return SizedBox(
+      height: 44,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        children: [
+          for (final k in keys)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ChoiceChip(
+                label: Text(labelFor(k)),
+                avatar: CircleAvatar(
+                  radius: 5,
+                  backgroundColor: colorFor(k),
+                ),
+                selected: selected == k,
+                showCheckmark: false,
+                selectedColor: AppTheme.sage.withValues(alpha: 0.22),
+                onSelected: (on) => onSelect(on ? k : null),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 }
 

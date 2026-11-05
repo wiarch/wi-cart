@@ -44,10 +44,22 @@ class Products extends Table with SyncColumns {
   Set<Column> get primaryKey => {id};
 }
 
+class Stores extends Table with SyncColumns {
+  TextColumn get name => text()();
+  TextColumn get location => text().nullable()();
+  TextColumn get icon => text().nullable()();
+  TextColumn get notes => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 class ShoppingLists extends Table with SyncColumns {
   TextColumn get name => text()();
   TextColumn get status => text().withDefault(const Constant('active'))();
   TextColumn get notes => text().nullable()();
+  TextColumn get icon => text().nullable()();
+  TextColumn get storeId => text().named('store_id').nullable()();
   TextColumn get storeLocation =>
       text().named('store_location').nullable()();
 
@@ -66,6 +78,7 @@ class ListItems extends Table with SyncColumns {
   RealColumn get qtyBought => real().named('qty_bought').nullable()();
   RealColumn get unitPrice => real().named('unit_price').nullable()();
   TextColumn get status => text().withDefault(const Constant('pending'))();
+  TextColumn get notes => text().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};

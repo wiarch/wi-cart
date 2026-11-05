@@ -9,6 +9,7 @@ part 'database.g.dart';
   Categories,
   Units,
   Products,
+  Stores,
   ShoppingLists,
   ListItems,
   PurchaseHistories,
@@ -22,10 +23,36 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 7;
+
+  /// Idempotent repair on every open: creates `stores` and the list columns
+  /// added in v4/v5 if a previous upgrade did not apply them.
+  Future<void> _ensureStoreSchema() async {
+    final m = createMigrator();
+    final tables = await customSelect(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='stores'",
+    ).get();
+    if (tables.isEmpty) await m.createTable(stores);
+
+    final cols = await customSelect('PRAGMA table_info(shopping_lists)').get();
+    final names = cols.map((r) => r.read<String>('name')).toSet();
+    if (!names.contains('icon')) {
+      await m.addColumn(shoppingLists, shoppingLists.icon);
+    }
+    if (!names.contains('store_id')) {
+      await m.addColumn(shoppingLists, shoppingLists.storeId);
+    }
+
+    final storeCols = await customSelect('PRAGMA table_info(stores)').get();
+    final storeNames = storeCols.map((r) => r.read<String>('name')).toSet();
+    if (!storeNames.contains('location')) {
+      await m.addColumn(stores, stores.location);
+    }
+  }
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
+        beforeOpen: (details) => _ensureStoreSchema(),
         onCreate: (m) => m.createAll(),
         onUpgrade: (m, from, to) async {
           if (from < 2) {
@@ -36,6 +63,19 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(listItems, listItems.unitAbbr);
             await m.addColumn(purchaseHistories, purchaseHistories.storeLocation);
             await m.addColumn(purchaseHistoryItems, purchaseHistoryItems.unitAbbr);
+          }
+          if (from < 4) {
+            await m.addColumn(shoppingLists, shoppingLists.icon);
+          }
+          if (from < 5) {
+            await m.createTable(stores);
+            await m.addColumn(shoppingLists, shoppingLists.storeId);
+          }
+          if (from < 6) {
+            await m.addColumn(stores, stores.location);
+          }
+          if (from < 7) {
+            await m.addColumn(listItems, listItems.notes);
           }
           if (from < 3) {
             // Rename legacy outbox → sync_queue (idempotent).
@@ -76,6 +116,7 @@ class AppDatabase extends _$AppDatabase {
       await delete(purchaseHistories).go();
       await delete(listItems).go();
       await delete(shoppingLists).go();
+      await delete(stores).go();
       await delete(products).go();
       await delete(units).go();
       await delete(categories).go();

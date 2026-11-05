@@ -1,119 +1,193 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../app_scope.dart';
 import '../../data/database.dart';
+import '../../utils/streams.dart';
+import '../lists/add_item_sheet.dart';
+import '../widgets/add_fab.dart';
+import '../widgets/app_menu.dart';
 import '../widgets/category_style.dart';
 import '../widgets/money_text.dart';
+import '../widgets/search_field.dart';
 import '../widgets/soft_card.dart';
 import '../widgets/sync_badge.dart';
 
-class ProductsPage extends StatelessWidget {
-  const ProductsPage({super.key});
+/// Product catalog grouped by category (sin categoría last).
+class ProductsPage extends StatefulWidget {
+  const ProductsPage({super.key, this.onLogout, this.embedded = false});
+
+  final VoidCallback? onLogout;
+
+  /// Body only (used inside the Inventario tabs).
+  final bool embedded;
+
+  @override
+  State<ProductsPage> createState() => ProductsPageState();
+}
+
+class ProductsPageState extends State<ProductsPage> {
+  // Cached: a new stream per build restarts StreamBuilder (spinner flicker).
+  Stream<(List<Product>, List<Category>)>? _stream;
+  final _search = TextEditingController();
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  void openEditor() => _edit(context);
 
   @override
   Widget build(BuildContext context) {
-    final repo = AppScope.of(context).repo;
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Productos'),
-        actions: const [SyncBadge()],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _edit(context),
-        child: const Icon(Icons.add),
-      ),
-      body: StreamBuilder<List<Product>>(
-        stream: repo.watchProducts(),
+    final scope = AppScope.of(context);
+    final repo = scope.repo;
+    _stream ??= combineLatest2(
+      repo.watchProducts(),
+      repo.watchCategories(),
+      (List<Product> p, List<Category> c) => (p, c),
+    );
+    final content = ListenableBuilder(
+      listenable: scope.rates,
+      builder: (context, _) => StreamBuilder<(List<Product>, List<Category>)>(
+        stream: _stream,
         builder: (context, snap) {
-          final items = snap.data ?? [];
-          if (items.isEmpty) {
+          if (snap.hasError) {
+            return Center(child: Text('Error: ${snap.error}'));
+          }
+          if (!snap.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final (products, categories) = snap.data!;
+          if (products.isEmpty) {
             return Center(
               child: Text(
                 'Sin productos. Crea uno.',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             );
           }
-          return FutureBuilder<List<Category>>(
-            future: repo.getCategories(),
-            builder: (context, catSnap) {
-              final cats = {
-                for (final c in catSnap.data ?? <Category>[]) c.id: c
-              };
-              return ListView.builder(
-                padding: const EdgeInsets.fromLTRB(0, 8, 0, 88),
-                itemCount: items.length,
-                itemBuilder: (context, i) {
-                  final p = items[i];
-                  final cat =
-                      p.categoryId != null ? cats[p.categoryId] : null;
-                  final color = CategoryStyle.parseColor(cat?.color) ??
-                      const Color(0xFF9E9E9E);
-                  return SoftCard(
-                    onTap: () => _edit(context, product: p),
-                    padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
-                    child: Row(
-                      children: [
-                        _thumb(p.localImagePath, color, cat?.icon),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                p.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 15,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              ListenableBuilder(
-                                listenable: AppScope.of(context).rates,
-                                builder: (context, _) {
-                                  final rates = AppScope.of(context).rates;
-                                  final parts = <String>[
-                                    if (cat != null) cat.name,
-                                    if (p.basePrice != null)
-                                      moneySubtitle(rates, p.basePrice!),
-                                  ];
-                                  return Text(
-                                    parts.join(' · '),
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall
-                                        ?.copyWith(
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurfaceVariant,
-                                        ),
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline),
-                          onPressed: () async {
-                            final sync = AppScope.of(context).sync;
-                            await repo.deleteProduct(p.id);
-                            await sync.syncNow();
-                          },
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              );
-            },
-          );
+          return _grouped(context, products, categories);
         },
+      ),
+    );
+    final body = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SearchField(
+          controller: _search,
+          hint: 'Buscar producto',
+          onChanged: () => setState(() {}),
+        ),
+        Expanded(child: content),
+      ],
+    );
+    if (widget.embedded) return body;
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Productos'),
+        actions: [
+          const SyncBadge(),
+          AppMenuButton(onLogout: widget.onLogout),
+        ],
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: AddFab(onPressed: () => _edit(context)),
+      body: body,
+    );
+  }
+
+  Widget _grouped(
+    BuildContext context,
+    List<Product> products,
+    List<Category> categories,
+  ) {
+    final catMap = {for (final c in categories) c.id: c};
+    final q = searchQuery(_search);
+    final groups = <String?, List<Product>>{};
+    for (final p in products.where(
+      (p) =>
+          matchesQuery(q, [p.name, p.description, catMap[p.categoryId]?.name]),
+    )) {
+      final key = (p.categoryId != null && catMap.containsKey(p.categoryId))
+          ? p.categoryId
+          : null;
+      groups.putIfAbsent(key, () => []).add(p);
+    }
+    final keys = groups.keys.toList()
+      ..sort((a, b) {
+        if (a == null) return 1;
+        if (b == null) return -1;
+        return catMap[a]!.name.compareTo(catMap[b]!.name);
+      });
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(0, 8, 0, 88),
+      children: [
+        for (final k in keys) ...[
+          _CategoryHeader(
+            name: k == null ? 'Sin categoría' : catMap[k]!.name,
+            icon: CategoryStyle.iconFor(k == null ? null : catMap[k]!.icon),
+            color:
+                CategoryStyle.parseColor(k == null ? null : catMap[k]!.color) ??
+                const Color(0xFF9E9E9E),
+            count: groups[k]!.length,
+          ),
+          for (final p in groups[k]!)
+            _productCard(context, p, k == null ? null : catMap[k]),
+        ],
+      ],
+    );
+  }
+
+  Widget _productCard(BuildContext context, Product p, Category? cat) {
+    final color =
+        CategoryStyle.parseColor(cat?.color) ?? const Color(0xFF9E9E9E);
+    final rates = AppScope.of(context).rates;
+    final repo = AppScope.of(context).repo;
+    return SoftCard(
+      onTap: () => _edit(context, product: p),
+      padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
+      child: Row(
+        children: [
+          _thumb(p.localImagePath, color, cat?.icon),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  p.name,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                  ),
+                ),
+                if (p.basePrice != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    moneySubtitle(rates, p.basePrice!),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            onPressed: () async {
+              final sync = AppScope.of(context).sync;
+              await repo.deleteProduct(p.id);
+              await sync.syncNow();
+            },
+          ),
+        ],
       ),
     );
   }
@@ -122,8 +196,7 @@ class ProductsPage extends StatelessWidget {
     if (path != null && File(path).existsSync()) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(12),
-        child:
-            Image.file(File(path), width: 48, height: 48, fit: BoxFit.cover),
+        child: Image.file(File(path), width: 48, height: 48, fit: BoxFit.cover),
       );
     }
     return Container(
@@ -137,164 +210,78 @@ class ProductsPage extends StatelessWidget {
     );
   }
 
+  /// Same form as the list "Agregar Producto" modal, without the cart toggle.
   Future<void> _edit(BuildContext context, {Product? product}) async {
-    final repo = AppScope.of(context).repo;
-    final categories = await repo.getCategories();
-    final units = await repo.getUnits();
-    if (!context.mounted) return;
-
-    final name = TextEditingController(text: product?.name ?? '');
-    final desc = TextEditingController(text: product?.description ?? '');
-    final price = TextEditingController(
-        text: product?.basePrice?.toStringAsFixed(2) ?? '');
-    String? localImage = product?.localImagePath;
-    String? categoryId = product?.categoryId;
-    String? unitId = product?.unitId ??
-        units
-            .where((u) => u.abbreviation == 'un')
-            .map((u) => u.id)
-            .firstOrNull;
-
-    final ok = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 8,
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
-          ),
-          child: StatefulBuilder(
-            builder: (ctx, setLocal) {
-              return SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      product == null ? 'Nuevo producto' : 'Editar producto',
-                      style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                    const SizedBox(height: 16),
-                    if (localImage != null && File(localImage!).existsSync())
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: Image.file(File(localImage!),
-                              height: 140,
-                              width: double.infinity,
-                              fit: BoxFit.cover),
-                        ),
-                      ),
-                    TextField(
-                      controller: name,
-                      decoration: const InputDecoration(labelText: 'Nombre'),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: desc,
-                      decoration:
-                          const InputDecoration(labelText: 'Descripción'),
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<String?>(
-                      // ignore: deprecated_member_use
-                      value: categoryId,
-                      items: [
-                        const DropdownMenuItem(
-                            value: null, child: Text('Sin categoría')),
-                        ...categories.map((c) => DropdownMenuItem(
-                              value: c.id,
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    CategoryStyle.iconFor(c.icon),
-                                    size: 18,
-                                    color: CategoryStyle.parseColor(c.color) ??
-                                        Colors.grey,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text(c.name),
-                                ],
-                              ),
-                            )),
-                      ],
-                      onChanged: (v) => setLocal(() => categoryId = v),
-                      decoration:
-                          const InputDecoration(labelText: 'Categoría'),
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<String?>(
-                      // ignore: deprecated_member_use
-                      value: unitId,
-                      items: units
-                          .map((u) => DropdownMenuItem(
-                                value: u.id,
-                                child:
-                                    Text('${u.name} (${u.abbreviation})'),
-                              ))
-                          .toList(),
-                      onChanged: (v) => setLocal(() => unitId = v),
-                      decoration: const InputDecoration(labelText: 'Medida'),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: price,
-                      keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true),
-                      decoration: const InputDecoration(
-                          labelText: 'Precio base (USD)'),
-                    ),
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: () async {
-                        final file = await ImagePicker()
-                            .pickImage(source: ImageSource.gallery);
-                        if (file != null) {
-                          setLocal(() => localImage = file.path);
-                        }
-                      },
-                      icon: const Icon(Icons.photo_outlined),
-                      label:
-                          Text(localImage == null ? 'Añadir foto' : 'Cambiar foto'),
-                    ),
-                    const SizedBox(height: 16),
-                    FilledButton(
-                      onPressed: () => Navigator.pop(ctx, true),
-                      child: const Text('Guardar'),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        );
-      },
-    );
-
-    if (ok != true || !context.mounted) return;
-    if (name.text.trim().isEmpty) return;
     final scope = AppScope.of(context);
+    final result = await showAddItemSheet(
+      context: context,
+      repo: scope.repo,
+      product: product,
+      showCart: false,
+    );
+    if (result == null || !context.mounted) return;
     await scope.repo.upsertProduct(
       id: product?.id,
-      name: name.text.trim(),
-      description: desc.text.trim().isEmpty ? null : desc.text.trim(),
-      categoryId: categoryId,
-      unitId: unitId,
-      basePrice: double.tryParse(price.text.replaceAll(',', '.')),
-      localImagePath: localImage,
+      name: result.name,
+      description: result.note,
+      categoryId: result.categoryId,
+      unitId: result.unitId,
+      basePrice: result.unitPrice,
+      localImagePath: result.imagePath,
       imagePending:
-          localImage != null && localImage != product?.localImagePath,
+          result.imagePath != null &&
+          result.imagePath != product?.localImagePath,
     );
     await scope.sync.syncNow();
+  }
+}
+
+class _CategoryHeader extends StatelessWidget {
+  const _CategoryHeader({
+    required this.name,
+    required this.icon,
+    required this.color,
+    required this.count,
+  });
+
+  final String name;
+  final IconData icon;
+  final Color color;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 6),
+      child: Row(
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 16, color: color),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              name,
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Text(
+            '$count',
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../app_scope.dart';
+import '../history/history_page.dart';
 import '../widgets/money_text.dart';
 
 class SettingsPage extends StatelessWidget {
-  const SettingsPage({super.key});
+  const SettingsPage({super.key, this.onLogout});
+
+  final VoidCallback? onLogout;
 
   @override
   Widget build(BuildContext context) {
@@ -108,6 +111,36 @@ class SettingsPage extends StatelessWidget {
                 value: rates.showEur,
                 onChanged: (v) => rates.setShowEur(v),
               ),
+              const Divider(height: 24),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.history),
+                title: const Text('Historial de compras'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const HistoryPage()),
+                ),
+              ),
+              if (onLogout != null) ...[
+                const Divider(height: 24),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.logout,
+                      color: Theme.of(context).colorScheme.error),
+                  title: Text('Cerrar sesión',
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.error)),
+                  onTap: () async {
+                    final scope = AppScope.of(context);
+                    final nav = Navigator.of(context);
+                    await scope.api.logout();
+                    await scope.repo.onUserSwitch(null);
+                    nav.popUntil((r) => r.isFirst);
+                    onLogout!();
+                  },
+                ),
+              ],
             ],
           );
         },

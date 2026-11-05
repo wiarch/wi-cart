@@ -23,6 +23,7 @@ class ListItem extends Model
         'qty_bought',
         'unit_price',
         'status',
+        'notes',
         'client_updated_at',
         'created_at',
         'updated_at',

@@ -17,6 +17,8 @@ class ShoppingList extends Model
         'name',
         'status',
         'notes',
+        'icon',
+        'store_id',
         'store_location',
         'client_updated_at',
         'created_at',

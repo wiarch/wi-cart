@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\PurchaseHistory;
 use App\Models\PurchaseHistoryItem;
 use App\Models\ShoppingList;
+use App\Models\Store;
 use App\Models\Unit;
 use App\Models\User;
 use Carbon\Carbon;
@@ -22,6 +23,7 @@ class SyncService
         'categories' => Category::class,
         'units' => Unit::class,
         'products' => Product::class,
+        'stores' => Store::class,
         'shopping_lists' => ShoppingList::class,
         'list_items' => ListItem::class,
         'purchase_histories' => PurchaseHistory::class,
@@ -36,10 +38,11 @@ class SyncService
             'name', 'description', 'category_id', 'unit_id',
             'base_price', 'image_path', 'image_pending',
         ],
-        'shopping_lists' => ['name', 'status', 'notes', 'store_location'],
+        'stores' => ['name', 'location', 'icon', 'notes'],
+        'shopping_lists' => ['name', 'status', 'notes', 'icon', 'store_id', 'store_location'],
         'list_items' => [
             'shopping_list_id', 'product_id', 'unit_id', 'unit_abbr', 'name',
-            'qty_planned', 'qty_bought', 'unit_price', 'status',
+            'qty_planned', 'qty_bought', 'unit_price', 'status', 'notes',
         ],
         'purchase_histories' => [
             'shopping_list_id', 'store_location', 'purchased_at', 'total',

@@ -7,13 +7,13 @@ class ApiClient {
   ApiClient({required this.baseUrl})
       : _dio = Dio(BaseOptions(
           baseUrl: baseUrl,
-          connectTimeout: const Duration(seconds: 20),
-          receiveTimeout: const Duration(seconds: 30),
+          connectTimeout: const Duration(seconds: 60),
+          receiveTimeout: const Duration(seconds: 60),
           headers: {'Accept': 'application/json'},
         )),
         _storage = const FlutterSecureStorage();
 
-  final String baseUrl;
+  String baseUrl;
   final Dio _dio;
   final FlutterSecureStorage _storage;
 
@@ -21,6 +21,11 @@ class ApiClient {
   static const userJsonKey = 'auth_user_json';
 
   Dio get dio => _dio;
+
+  void setBaseUrl(String url) {
+    baseUrl = url.replaceAll(RegExp(r'/+$'), '');
+    _dio.options.baseUrl = baseUrl;
+  }
 
   Future<void> setToken(String? token) async {
     if (token == null) {
@@ -41,30 +46,12 @@ class ApiClient {
 
   Future<String?> getToken() => _storage.read(key: tokenKey);
 
-  Future<Map<String, dynamic>> register({
-    required String name,
-    required String email,
-    required String password,
+  Future<Map<String, dynamic>> loginWithGoogle({
+    required String idToken,
     String deviceName = 'mobile',
   }) async {
-    final res = await _dio.post('/api/register', data: {
-      'name': name,
-      'email': email,
-      'password': password,
-      'device_name': deviceName,
-    });
-    await _persistAuth(res.data as Map<String, dynamic>);
-    return res.data as Map<String, dynamic>;
-  }
-
-  Future<Map<String, dynamic>> login({
-    required String email,
-    required String password,
-    String deviceName = 'mobile',
-  }) async {
-    final res = await _dio.post('/api/login', data: {
-      'email': email,
-      'password': password,
+    final res = await _dio.post('/api/auth/google', data: {
+      'id_token': idToken,
       'device_name': deviceName,
     });
     await _persistAuth(res.data as Map<String, dynamic>);

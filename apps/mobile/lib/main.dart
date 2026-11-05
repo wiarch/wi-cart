@@ -42,11 +42,21 @@ class _BootAppState extends State<_BootApp> {
   Future<void> _boot() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final baseUrl = prefs.getString('api_base_url') ??
-          const String.fromEnvironment(
-            'API_BASE_URL',
-            defaultValue: 'http://10.0.2.2:8000',
-          );
+      const defaultApi = String.fromEnvironment(
+        'API_BASE_URL',
+        defaultValue: 'https://wi-cart.wiarch.net',
+      );
+      var baseUrl = prefs.getString('api_base_url') ?? defaultApi;
+      // Drop local/dev overrides so installs always hit production.
+      if (baseUrl.contains('10.0.2.2') ||
+          baseUrl.contains('127.0.0.1') ||
+          baseUrl.contains('localhost') ||
+          baseUrl.contains('172.16.') ||
+          baseUrl.contains(':8000') ||
+          baseUrl.contains(':8001')) {
+        baseUrl = defaultApi;
+        await prefs.setString('api_base_url', baseUrl);
+      }
 
       final db = AppDatabase();
       final api = ApiClient(baseUrl: baseUrl);

@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../app_scope.dart';
-import 'categories/categories_page.dart';
+import 'budget/budget_page.dart';
 import 'history/history_page.dart';
-import 'lists/list_detail_page.dart';
-import 'lists/lists_page.dart';
-import 'products/products_page.dart';
+import 'inventario/inventario_page.dart';
+import 'stores/stores_page.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key, required this.onLogout});
@@ -18,50 +16,33 @@ class HomeShell extends StatefulWidget {
 
 class _HomeShellState extends State<HomeShell> {
   int _index = 0;
-  bool _openedLast = false;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_openedLast) {
-      _openedLast = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _openLastList());
-    }
-  }
-
-  Future<void> _openLastList() async {
-    final list = await AppScope.of(context).repo.getLastActiveList();
-    if (list == null || !mounted) return;
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) =>
-            ListDetailPage(listId: list.id, listName: list.name),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
     final pages = [
-      ListsPage(onLogout: widget.onLogout),
-      const ProductsPage(),
-      const CategoriesPage(),
+      StoresPage(onLogout: widget.onLogout),
+      InventarioPage(onLogout: widget.onLogout),
+      BudgetPage(onLogout: widget.onLogout),
       const HistoryPage(),
     ];
     return Scaffold(
       body: IndexedStack(index: _index, children: pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
+        onDestinationSelected: (i) {
+          // Tap the active tab again: back to its root (pop sub-pages).
+          if (i == _index) Navigator.of(context).popUntil((r) => r.isFirst);
+          setState(() => _index = i);
+        },
         destinations: const [
           NavigationDestination(
-              icon: Icon(Icons.list_alt), label: 'Listas'),
+              icon: Icon(Icons.storefront_outlined), label: 'Tiendas'),
           NavigationDestination(
-              icon: Icon(Icons.inventory_2_outlined), label: 'Productos'),
+              icon: Icon(Icons.inventory_2_outlined), label: 'Inventario'),
           NavigationDestination(
-              icon: Icon(Icons.category_outlined), label: 'Categorías'),
-          NavigationDestination(
-              icon: Icon(Icons.history), label: 'Historial'),
+              icon: Icon(Icons.account_balance_wallet_outlined),
+              label: 'Presupuesto'),
+          NavigationDestination(icon: Icon(Icons.history), label: 'Historial'),
         ],
       ),
     );

@@ -1,6 +1,16 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../app_scope.dart';
+import '../theme/app_theme.dart';
+
+// Web OAuth client ID (public). Android client is bound by package + SHA-1, not used in code.
+const _googleServerClientId = String.fromEnvironment(
+  'GOOGLE_SERVER_CLIENT_ID',
+  defaultValue:
+      '572243431646-1g23qfe8luhmpmoahh3873jnqp97od3e.apps.googleusercontent.com',
+);
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key, required this.onAuthed});
@@ -12,48 +22,56 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _email = TextEditingController(text: 'demo@wicart.local');
-  final _password = TextEditingController(text: 'password123');
-  final _name = TextEditingController(text: 'Demo');
-  bool _register = false;
+  static final Future<void> _googleInit = GoogleSignIn.instance.initialize(
+    serverClientId: _googleServerClientId,
+  );
+
   bool _busy = false;
   String? _error;
 
-  @override
-  void dispose() {
-    _email.dispose();
-    _password.dispose();
-    _name.dispose();
-    super.dispose();
-  }
-
-  Future<void> _submit() async {
+  Future<void> _signIn() async {
     setState(() {
       _busy = true;
       _error = null;
     });
     final scope = AppScope.of(context);
     try {
-      if (_register) {
-        await scope.api.register(
-          name: _name.text.trim(),
-          email: _email.text.trim(),
-          password: _password.text,
-        );
-      } else {
-        await scope.api.login(
-          email: _email.text.trim(),
-          password: _password.text,
-        );
-      }
+      await _googleInit;
+      final account = await GoogleSignIn.instance.authenticate();
+      final idToken = account.authentication.idToken;
+      if (idToken == null) throw StateError('Google no devolvió id_token');
+      await scope.api.loginWithGoogle(idToken: idToken);
       final userId = await scope.api.getUserId();
       await scope.repo.onUserSwitch(userId);
       await scope.repo.ensureDefaults();
-      await scope.sync.syncNow();
+      try {
+        await scope.sync.syncNow();
+      } catch (_) {
+        // Login ok even if first sync fails (offline / API hiccup).
+      }
       if (!mounted) return;
       widget.onAuthed();
-    } catch (e) {
-      if (mounted) setState(() => _error = e.toString());
+    } on GoogleSignInException catch (e) {
+      if (mounted && e.code != GoogleSignInExceptionCode.canceled) {
+        setState(
+          () => _error =
+              'No se pudo iniciar sesión con Google. Intenta de nuevo.',
+        );
+      }
+    } on DioException catch (e) {
+      if (mounted) {
+        setState(
+          () => _error = e.response == null
+              ? 'No se pudo conectar con el servidor. Revisa tu conexión y vuelve a intentarlo.'
+              : 'El servidor rechazó el inicio de sesión. Intenta de nuevo.',
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _error = 'Ocurrió un error inesperado. Intenta de nuevo.',
+        );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -61,59 +79,126 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurfaceVariant;
     return Scaffold(
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(24),
-          children: [
-            const SizedBox(height: 48),
-            Text('wi-cart',
-                style: Theme.of(context).textTheme.headlineLarge,
-                textAlign: TextAlign.center),
-            const SizedBox(height: 8),
-            Text('Offline-first',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium),
-            const SizedBox(height: 32),
-            if (_register)
-              TextField(
-                controller: _name,
-                decoration: const InputDecoration(labelText: 'Nombre'),
-              ),
-            TextField(
-              controller: _email,
-              keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(labelText: 'Email'),
+      body: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: RadialGradient(
+            center: Alignment(0, -0.6),
+            radius: 1.1,
+            colors: [Color(0x668EB69B), AppTheme.mint],
+          ),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 28),
+            child: Column(
+              children: [
+                const Spacer(),
+                Container(
+                  width: 88,
+                  height: 88,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [AppTheme.mint, AppTheme.sage],
+                    ),
+                    borderRadius: BorderRadius.circular(26),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.sage.withValues(alpha: 0.35),
+                        blurRadius: 28,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.shopping_basket_rounded,
+                    size: 44,
+                    color: AppTheme.ink800,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'wi-cart',
+                  style: theme.textTheme.headlineLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                    color: AppTheme.ink700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Tus listas de compras y presupuesto sin conexión',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyLarge?.copyWith(color: muted),
+                ),
+                const Spacer(),
+                if (_error != null) ...[
+                  Text(
+                    _error!,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: theme.colorScheme.error),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.ink800.withValues(alpha: 0.14),
+                        blurRadius: 18,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: FilledButton.icon(
+                      onPressed: _busy ? null : _signIn,
+                      style: FilledButton.styleFrom(
+                        textStyle: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      icon: _busy
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.account_circle),
+                      label: const Text('Continuar con Google'),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.cloud_off_outlined, size: 16, color: muted),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Sin red: tras login previo la app sigue usable. '
+                        'Sync al recuperar conexión.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: muted,
+                          height: 1.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 32),
+              ],
             ),
-            TextField(
-              controller: _password,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: 'Password'),
-            ),
-            if (_error != null) ...[
-              const SizedBox(height: 12),
-              Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-            ],
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: _busy ? null : _submit,
-              child: Text(_register ? 'Crear cuenta' : 'Entrar'),
-            ),
-            TextButton(
-              onPressed: _busy
-                  ? null
-                  : () => setState(() => _register = !_register),
-              child: Text(_register
-                  ? '¿Ya tienes cuenta? Entrar'
-                  : 'Crear cuenta'),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Sin red: tras login previo la app sigue usable. Sync al recuperar conexión.',
-              style: Theme.of(context).textTheme.bodySmall,
-              textAlign: TextAlign.center,
-            ),
-          ],
+          ),
         ),
       ),
     );

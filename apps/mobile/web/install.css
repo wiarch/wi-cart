@@ -1,14 +1,15 @@
 /* Wi Cart — Android install banner (Material 3 / clean) */
 :root {
-  --wc-bg: #f8f9fa;
-  --wc-surface: #ffffff;
-  --wc-field: #f5f5f7;
-  --wc-primary: #1f6f4a;
-  --wc-on-primary: #ffffff;
-  --wc-text: #1a1c1e;
-  --wc-muted: #5f6368;
-  --wc-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
+  --wc-bg: #daf1de;
+  --wc-surface: #daf1de;
+  --wc-field: #daf1de;
+  --wc-primary: #235347;
+  --wc-on-primary: #daf1de;
+  --wc-text: #235347;
+  --wc-muted: #163832;
+  --wc-shadow: 0 8px 28px rgba(22, 56, 50, 0.14);
   --wc-radius: 16px;
+  --wc-border: rgba(142, 182, 155, 0.45);
 }
 
 #wc-install-root {
@@ -31,6 +32,7 @@
   max-width: 480px;
   margin: 0 auto;
   background: var(--wc-surface);
+  border: 1px solid var(--wc-border);
   border-radius: var(--wc-radius);
   box-shadow: var(--wc-shadow);
   padding: 14px 14px 12px;
@@ -101,7 +103,7 @@
 }
 
 .wc-banner__close:hover {
-  background: #ebebef;
+  background: var(--wc-field);
 }
 
 .wc-banner__actions {
@@ -181,7 +183,7 @@
 .wc-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(16, 24, 20, 0.35);
+  background: rgba(22, 56, 50, 0.28);
   display: flex;
   align-items: center;
   justify-content: center;

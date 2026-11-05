@@ -46,9 +46,7 @@ class HistoryPage extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            h.storeLocation?.isNotEmpty == true
-                                ? h.storeLocation!
-                                : 'Sin tienda',
+                            'Compra',
                             style: const TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 15,
@@ -114,9 +112,7 @@ class TicketPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dateFmt = DateFormat('dd/MM/yyyy HH:mm');
-    final store = history.storeLocation?.isNotEmpty == true
-        ? history.storeLocation!
-        : 'Sin tienda';
+    const store = 'Compra';
 
     return Scaffold(
       appBar: AppBar(
@@ -243,9 +239,7 @@ class TicketPage extends StatelessWidget {
 
   Future<void> _printPdf(BuildContext context) async {
     final dateFmt = DateFormat('dd/MM/yyyy HH:mm');
-    final store = history.storeLocation?.isNotEmpty == true
-        ? history.storeLocation!
-        : 'Sin tienda';
+    const store = 'Compra';
     final rates = AppScope.of(context).rates;
     String money(double usd) => moneySubtitle(rates, usd);
     final doc = pw.Document();
