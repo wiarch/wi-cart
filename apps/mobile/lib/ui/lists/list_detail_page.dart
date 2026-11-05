@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -41,6 +42,8 @@ class _ListDetailPageState extends State<ListDetailPage> {
   String? _filterKey;
   /// Item ids playing "fly to cart" / "return" animation.
   final Set<String> _flyingIds = {};
+  String? _cartToast;
+  Timer? _cartToastTimer;
   final _searchCtrl = TextEditingController();
   final _searchFocus = FocusNode();
   final _listScroll = ScrollController();
@@ -61,10 +64,19 @@ class _ListDetailPageState extends State<ListDetailPage> {
 
   @override
   void dispose() {
+    _cartToastTimer?.cancel();
     _searchCtrl.dispose();
     _searchFocus.dispose();
     _listScroll.dispose();
     super.dispose();
+  }
+
+  void _showCartToast(String name) {
+    _cartToastTimer?.cancel();
+    setState(() => _cartToast = name);
+    _cartToastTimer = Timer(const Duration(milliseconds: 1400), () {
+      if (mounted) setState(() => _cartToast = null);
+    });
   }
 
   Future<void> _scrollToCart() async {
@@ -251,7 +263,68 @@ class _ListDetailPageState extends State<ListDetailPage> {
             ],
           ),
           floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-          floatingActionButton: AddFab(onPressed: () => _addItem(context)),
+          floatingActionButton: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 220),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                transitionBuilder: (child, anim) => FadeTransition(
+                  opacity: anim,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0.15, 0),
+                      end: Offset.zero,
+                    ).animate(anim),
+                    child: child,
+                  ),
+                ),
+                child: _cartToast == null
+                    ? const SizedBox.shrink(key: ValueKey('toast-off'))
+                    : Material(
+                        key: const ValueKey('toast-on'),
+                        color: AppTheme.ink800,
+                        elevation: 6,
+                        shadowColor: AppTheme.ink800.withValues(alpha: 0.35),
+                        borderRadius: BorderRadius.circular(28),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 220),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 12),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.shopping_cart_checkout,
+                                  color: AppTheme.mint,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    '$_cartToast → carrito',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: AppTheme.mint,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+              ),
+              if (_cartToast != null) const SizedBox(width: 12),
+              AddFab(onPressed: () => _addItem(context)),
+            ],
+          ),
           bottomNavigationBar: BottomAppBar(
             height: 78,
             color: AppTheme.surface,
@@ -413,7 +486,6 @@ class _ListDetailPageState extends State<ListDetailPage> {
     Future<void> toggleCart() async {
       if (_flyingIds.contains(item.id)) return;
       final sync = AppScope.of(context).sync;
-      final messenger = ScaffoldMessenger.of(context);
       setState(() => _flyingIds.add(item.id));
       await Future<void>.delayed(const Duration(milliseconds: 280));
       if (!mounted) return;
@@ -427,20 +499,7 @@ class _ListDetailPageState extends State<ListDetailPage> {
       if (!mounted) return;
       setState(() => _flyingIds.remove(item.id));
       if (toCart) {
-        messenger.clearSnackBars();
-        messenger.showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.shopping_cart_checkout,
-                    color: AppTheme.mint, size: 18),
-                const SizedBox(width: 10),
-                Expanded(child: Text('${item.name} → carrito')),
-              ],
-            ),
-            duration: const Duration(milliseconds: 1400),
-          ),
-        );
+        _showCartToast(item.name);
         Future<void>.delayed(const Duration(milliseconds: 700), () {
           if (mounted) setState(() => _cartPulse = false);
         });
