@@ -1,71 +1,110 @@
 # WI-Cart
 
-**An offline-first shopping list application built with Flutter and Laravel.**
+**An offline-first shopping and household expense management application built with Flutter and Laravel.**
 
-Manage shopping lists, products, quantities and purchase history with a local-first architecture. Work without an internet connection and synchronize your data when connectivity is restored.
+WI-Cart helps individuals and households plan purchases, organize products, manage shopping lists, track spending and review purchase history. Its local-first architecture keeps essential workflows available offline and synchronizes data with the backend when connectivity returns.
 
-<!-- Add a real application screenshot or project banner here -->
+<p align="center">
+  <strong>Plan smarter. Shop with control. Stay in sync.</strong>
+</p>
 
 ## Overview
 
-WI-Cart is a shopping list application designed around an offline-first architecture. Its mobile client uses SQLite as the primary source of truth, while a Laravel API provides multi-device synchronization and centralized data persistence.
+WI-Cart is a cross-platform shopping manager organized as a monorepo. The Flutter client targets Android, iOS, Linux, macOS, Windows and web, while a Laravel API provides authentication and centralized synchronization.
 
-The project is organized as a monorepo containing the mobile application, backend API and development tooling.
+The local SQLite database is the source of truth for the client experience. Mutations are queued locally and synchronized with the API when a connection is available.
 
-## Key Features
+The product direction is to support both private personal shopping data and shared household shopping spaces. The current sharing endpoints copy lists or stores to another account; collaborative shared lists with member roles and coordinated updates are a planned evolution, not a feature to assume is already complete.
 
-- **Offline-first:** Manage shopping lists without an internet connection.
-- **Local database:** Persistent local storage powered by SQLite and Drift.
-- **Data synchronization:** Push and pull synchronization with the backend.
-- **Conflict resolution:** Last-Write-Wins (LWW) based on client timestamps.
-- **Product management:** Organize products, categories, units and prices.
-- **Shopping lists:** Track planned quantities and items added to the cart.
-- **Purchase history:** Keep track of completed purchases and totals.
-- **Multi-device architecture:** Synchronize data through a centralized API.
-- **Soft deletes:** Preserve deletion information during synchronization.
+## Product capabilities
 
-## Technology Stack
+### Available in the current codebase
 
-| Component | Technology |
+- **Offline-first shopping lists:** Create and manage lists without an active connection.
+- **Product catalog:** Maintain products, categories, units, prices and product images.
+- **Shopping workflow:** Track planned quantities, items added to the cart and purchased quantities.
+- **Purchase history:** Preserve completed purchases, line items and totals.
+- **Local persistence:** SQLite storage managed through Drift.
+- **Bidirectional synchronization:** Push local mutations and pull remote changes through the Laravel API.
+- **Conflict handling:** Last-Write-Wins based on client timestamps.
+- **Multi-account foundations:** Sanctum authentication, Google sign-in integration and account-scoped local data.
+- **Store management:** Associate shopping lists with stores and locations.
+- **Currency display:** USD prices with cached BCV conversions for Bs and optional EUR display.
+- **Data portability:** Local backup and list import capabilities.
+- **Cross-platform Flutter project:** Android, iOS, Linux, macOS, Windows and web project targets.
+
+### Product direction
+
+- Private personal workspaces with strict per-account data isolation.
+- Shared household spaces and collaborative shopping lists.
+- Invitations, member roles and permissions for shared lists.
+- Safe synchronization of concurrent changes between household members.
+- Budgets, spending summaries and comparisons across purchase history.
+- Smarter product suggestions based on previous purchases and list context.
+- Better recurring-list and purchase-planning workflows.
+- More comprehensive analytics and export options.
+
+Planned capabilities must be implemented and tested before being described as released functionality.
+
+## Technology stack
+
+| Area | Technology |
 |---|---|
-| Mobile application | Flutter / Dart |
-| Local database | SQLite / Drift |
-| Backend API | Laravel 11 |
-| Authentication | Laravel Sanctum |
+| Mobile, desktop and web client | Flutter / Dart |
+| Local persistence | SQLite / Drift |
+| Backend API | Laravel 12 / PHP 8.3+ |
+| API authentication | Laravel Sanctum |
 | Production database | MySQL |
-| Development API | Node.js |
+| Development API | Node.js / Express |
+| HTTP client | Dio |
+| Connectivity detection | connectivity_plus |
+| Secure token storage | flutter_secure_storage |
+| Local preferences | shared_preferences |
 | Architecture | Offline-first / Monorepo |
 
-## Repository Structure
+## Repository structure
 
 ```text
 wi-cart/
 ├── apps/
-│   ├── api/             # Laravel production API
-│   ├── dev-api/         # Local development API
-│   └── mobile/          # Flutter application
-│
+│   ├── api/                 # Laravel production API
+│   ├── dev-api/             # Lightweight Node.js development API
+│   └── mobile/              # Flutter application
 ├── docs/
 │   ├── architecture.md
+│   ├── deploy-vps.md
 │   ├── sync-contract.md
-│   └── sync-engine.md
-│
-├── dev                 # Development launcher
-├── .gitignore
+│   ├── sync-engine.md
+│   └── ...
+├── .github/
+├── CLAUDE.md
+├── PROMPT.md
+├── CONTRIBUTING.md
+├── SECURITY.md
+├── dev                       # Development launcher
 └── README.md
 ```
 
-## Getting Started
+## Getting started
 
-### Development Environment
+### Requirements
 
-The project includes a development launcher to simplify local execution.
+- Flutter SDK compatible with Dart `^3.8.0`
+- PHP 8.3 or newer
+- Composer
+- Node.js and npm
+- MySQL 8+ for the production API
+- Android Studio / platform toolchains as needed for the target platform
+
+### Development launcher
+
+The repository includes a launcher for the local development workflow:
 
 ```bash
-# Start the API and Flutter Linux application
+# Start the development API and Flutter Linux application
 ./dev
 
-# Start API and web application
+# Start the API and Flutter web application
 ./dev web
 
 # Start only the development API
@@ -75,128 +114,78 @@ The project includes a development launcher to simplify local execution.
 ./dev stop
 ```
 
-The development launcher uses the Node.js API located in `apps/dev-api`.
+The development launcher uses the Express API in `apps/dev-api`. Review the launcher and its environment assumptions before using it in a new environment.
 
-### Production Backend (Laravel)
-
-Navigate to the Laravel API directory:
+### Laravel API
 
 ```bash
 cd apps/api
-```
-
-Install dependencies:
-
-```bash
 composer install
-```
-
-Configure the environment:
-
-```bash
 cp .env.example .env
 php artisan key:generate
 ```
 
-Configure your MySQL connection in `.env`.
-
-Run database migrations and seeders:
+Configure the database and application values in `.env`, then run:
 
 ```bash
 php artisan migrate --seed
-```
-
-Create the storage symbolic link:
-
-```bash
 php artisan storage:link
+php artisan serve
 ```
 
-Start the development server:
-
-```bash
-php artisan serve --host=0.0.0.0 --port=8000
-```
-
-### Mobile Application
-
-Navigate to the Flutter application:
+### Flutter client
 
 ```bash
 cd apps/mobile
-```
-
-Install dependencies:
-
-```bash
 flutter pub get
-```
-
-Generate the required code:
-
-```bash
 dart run build_runner build
-```
-
-Run the application:
-
-```bash
 flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000
 ```
 
-Adjust the API URL according to your execution environment.
+Adjust `API_BASE_URL` for the selected platform and environment. The Android emulator commonly reaches the host machine through `10.0.2.2`; other targets may require a different address.
 
-## Offline Synchronization
+## Offline synchronization
 
-WI-Cart follows a local-first synchronization strategy.
+SQLite remains the UI source of truth. The client records mutations in a local outbox and synchronizes them when connectivity is restored.
 
-SQLite remains the source of truth for the user interface. Changes are stored locally and queued for synchronization when connectivity becomes available.
+1. The user changes local data.
+2. The client persists the change in SQLite.
+3. The mutation is queued in the synchronization outbox.
+4. The synchronization engine sends pending mutations to the API.
+5. The API applies accepted changes and returns remote changes.
+6. The client merges changes using the documented conflict policy.
+7. Pending product image uploads are processed.
 
-### Synchronization Workflow
+The current conflict policy is Last-Write-Wins using `client_updated_at`. This policy and its edge cases must be considered before introducing collaborative editing.
 
-1. User modifies local data.
-2. Changes are stored in SQLite.
-3. Mutations are added to the synchronization outbox.
-4. The synchronization engine detects connectivity.
-5. Pending mutations are pushed to the API.
-6. Remote changes are pulled and merged locally.
-7. Conflicts are resolved using Last-Write-Wins.
+See [Sync Contract](docs/sync-contract.md) and [Sync Engine](docs/sync-engine.md).
 
-### Synchronization Rules
+## Documentation
 
-- UUIDs are generated on the client.
-- Mutations are tracked through a local outbox.
-- Conflicts are resolved using `client_updated_at`.
-- Deletions are represented through soft deletes.
-- Local data is cleared when switching accounts or logging out.
-- Product image uploads can be deferred until synchronization.
-
-For implementation details, see [Sync Contract](docs/sync-contract.md).
-
-## Architecture
-
-The application is divided into three main components:
-
-- **Mobile Client:** Flutter application responsible for the user interface and local data.
-- **Production API:** Laravel backend responsible for authentication and remote persistence.
-- **Development API:** Lightweight Node.js API used by the local development workflow.
-
-More information:
-
-- [System Architecture](docs/architecture.md)
-- [Synchronization Contract](docs/sync-contract.md)
-- [Synchronization Engine](docs/sync-engine.md)
+- [Product scope and requirements](docs/PRODUCT.md)
+- [System architecture](docs/ARCHITECTURE.md)
+- [Roadmap](docs/ROADMAP.md)
+- [Architecture decisions](docs/DECISIONS.md)
+- [Synchronization contract](docs/sync-contract.md)
+- [Synchronization engine](docs/sync-engine.md)
+- [VPS deployment](docs/deploy-vps.md)
+- [Contributing](CONTRIBUTING.md)
+- [Security policy](SECURITY.md)
+- [Claude Code instructions](CLAUDE.md)
+- [Implementation prompt](PROMPT.md)
 
 ## Security
 
-- Never commit production credentials or environment files.
-- Keep API secrets outside version control.
-- Use HTTPS in production.
-- Use isolated credentials for development and production environments.
+- Never commit `.env` files, API keys, tokens or production credentials.
+- Keep account data isolated on both the API and local client.
+- Use HTTPS for production API traffic.
+- Validate ownership and authorization on every account-scoped operation.
+- Treat synchronization payloads and imported files as untrusted input.
+- Report vulnerabilities privately; see [SECURITY.md](SECURITY.md).
 
-## Project Structure
+## Project status
 
-WI-Cart is maintained as a monorepo to keep the mobile application, backend and technical documentation together.
+WI-Cart is under active development. The repository contains an existing Flutter client, Laravel API, development API, local database and synchronization implementation. Documentation describes both verified foundations and future product goals; it does not imply that planned capabilities are already implemented.
 
 ## License
 
@@ -204,5 +193,4 @@ License information will be published once the project's licensing terms are def
 
 ---
 
-**WI-Cart**  
-Offline-first shopping, designed for reliability and simplicity.
+**WI-Cart** — Offline-first shopping management for individuals and households.
