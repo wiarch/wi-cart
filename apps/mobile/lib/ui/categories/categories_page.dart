@@ -23,7 +23,10 @@ class CategoriesPage extends StatefulWidget {
   State<CategoriesPage> createState() => CategoriesPageState();
 }
 
-class CategoriesPageState extends State<CategoriesPage> {
+class CategoriesPageState extends State<CategoriesPage>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => widget.embedded;
   // Cached: a new stream per build restarts StreamBuilder (spinner flicker).
   Stream<List<Category>>? _stream;
   final _search = TextEditingController();
@@ -38,6 +41,7 @@ class CategoriesPageState extends State<CategoriesPage> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final repo = AppScope.of(context).repo;
     _stream ??= repo.watchCategories();
     final content = StreamBuilder<List<Category>>(
@@ -152,30 +156,61 @@ class CategoriesPageState extends State<CategoriesPage> {
     var selectedColor =
         CategoryStyle.normalizeHex(category?.color) ??
         CategoryStyle.presetColors.first;
+    var showCustom = false;
+    var hsv = HSVColor.fromColor(
+      CategoryStyle.parseColor(selectedColor) ?? const Color(0xFF2E7D32),
+    );
+    final hexCtrl = TextEditingController(text: selectedColor.substring(1));
 
-    final ok = await showDialog<bool>(
+    final ok = await showModalBottomSheet<bool>(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: AppTheme.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setLocal) {
             final preview =
                 CategoryStyle.parseColor(selectedColor) ?? Colors.grey;
 
-            return AlertDialog(
-              title: Text(category == null ? 'Nueva categoría' : 'Editar'),
-              content: SizedBox(
-                width: 360,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      TextField(
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 8,
+                bottom: MediaQuery.viewInsetsOf(ctx).bottom + 20,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            category == null ? 'Nueva categoría' : 'Editar categoría',
+                            style: Theme.of(ctx).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Cerrar',
+                          icon: const Icon(Icons.keyboard_arrow_down),
+                          onPressed: () => Navigator.pop(ctx, false),
+                        ),
+                      ],
+                    ),
+                    TextField(
                         controller: name,
                         decoration: const InputDecoration(
                           labelText: 'Nombre',
                           hintText: 'Ej. Lácteos',
                         ),
+                        onChanged: (_) => setLocal(() {}),
                       ),
                       const SizedBox(height: 20),
                       Text('Icono', style: Theme.of(ctx).textTheme.titleSmall),
@@ -208,25 +243,83 @@ class CategoriesPageState extends State<CategoriesPage> {
                             _ColorDot(
                               hex: hex,
                               selected: selectedColor == hex,
-                              onTap: () => setLocal(() => selectedColor = hex),
+                              onTap: () => setLocal(() {
+                                selectedColor = hex;
+                                showCustom = false;
+                              }),
                             ),
                           _CustomColorButton(
-                            selected: !CategoryStyle.presetColors.contains(
-                              selectedColor,
-                            ),
+                            selected: showCustom,
                             color: preview,
-                            onTap: () async {
-                              final picked = await _pickCustomColor(
-                                ctx,
-                                initial: selectedColor,
-                              );
-                              if (picked != null) {
-                                setLocal(() => selectedColor = picked);
-                              }
-                            },
+                            onTap: () => setLocal(() => showCustom = !showCustom),
                           ),
                         ],
                       ),
+                      if (showCustom) ...[
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: hexCtrl,
+                          decoration: const InputDecoration(
+                            labelText: 'Color personalizado',
+                            prefixText: '#',
+                          ),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(
+                              RegExp(r'[0-9a-fA-F]'),
+                            ),
+                            LengthLimitingTextInputFormatter(6),
+                          ],
+                          onChanged: (raw) {
+                            final norm = CategoryStyle.normalizeHex('#$raw');
+                            if (norm == null) return;
+                            setLocal(() {
+                              selectedColor = norm;
+                              hsv = HSVColor.fromColor(
+                                CategoryStyle.parseColor(norm)!,
+                              );
+                            });
+                          },
+                        ),
+                        _SliderRow(
+                          label: 'Tono',
+                          value: hsv.hue,
+                          max: 360,
+                          activeColor: HSVColor.fromAHSV(1, hsv.hue, 1, 1).toColor(),
+                          onChanged: (v) => setLocal(() {
+                            hsv = hsv.withHue(v.clamp(0, 360));
+                            selectedColor = CategoryStyle.hexFromColor(
+                              hsv.toColor(),
+                            );
+                            hexCtrl.text = selectedColor.substring(1);
+                          }),
+                        ),
+                        _SliderRow(
+                          label: 'Saturación',
+                          value: hsv.saturation,
+                          max: 1,
+                          activeColor: preview,
+                          onChanged: (v) => setLocal(() {
+                            hsv = hsv.withSaturation(v.clamp(0, 1));
+                            selectedColor = CategoryStyle.hexFromColor(
+                              hsv.toColor(),
+                            );
+                            hexCtrl.text = selectedColor.substring(1);
+                          }),
+                        ),
+                        _SliderRow(
+                          label: 'Brillo',
+                          value: hsv.value,
+                          max: 1,
+                          activeColor: preview,
+                          onChanged: (v) => setLocal(() {
+                            hsv = hsv.withValue(v.clamp(0, 1));
+                            selectedColor = CategoryStyle.hexFromColor(
+                              hsv.toColor(),
+                            );
+                            hexCtrl.text = selectedColor.substring(1);
+                          }),
+                        ),
+                      ],
                       const SizedBox(height: 16),
                       Container(
                         width: double.infinity,
@@ -267,21 +360,17 @@ class CategoriesPageState extends State<CategoriesPage> {
                           ],
                         ),
                       ),
+                      const SizedBox(height: 16),
+                      FilledButton(
+                        onPressed: name.text.trim().isEmpty
+                            ? null
+                            : () => Navigator.pop(ctx, true),
+                        child: const Text('Guardar'),
+                      ),
                     ],
                   ),
                 ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx, false),
-                  child: const Text('Cancelar'),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.pop(ctx, true),
-                  child: const Text('Guardar'),
-                ),
-              ],
-            );
+              );
           },
         );
       },
@@ -299,126 +388,6 @@ class CategoriesPageState extends State<CategoriesPage> {
     await scope.sync.syncNow();
   }
 
-  Future<String?> _pickCustomColor(
-    BuildContext context, {
-    required String initial,
-  }) async {
-    final hexCtrl = TextEditingController(
-      text: CategoryStyle.normalizeHex(initial)?.substring(1) ?? '2E7D32',
-    );
-    var hsv = HSVColor.fromColor(
-      CategoryStyle.parseColor(initial) ?? const Color(0xFF2E7D32),
-    );
-
-    return showDialog<String>(
-      context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setLocal) {
-            void applyHsv(HSVColor next) {
-              setLocal(() {
-                hsv = next;
-                hexCtrl.text = CategoryStyle.hexFromColor(
-                  next.toColor(),
-                ).substring(1);
-              });
-            }
-
-            void applyHex(String raw) {
-              final norm = CategoryStyle.normalizeHex('#$raw');
-              if (norm == null) return;
-              setLocal(() {
-                hsv = HSVColor.fromColor(CategoryStyle.parseColor(norm)!);
-              });
-            }
-
-            final color = hsv.toColor();
-
-            return AlertDialog(
-              title: const Text('Color personalizado'),
-              content: SizedBox(
-                width: 320,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      height: 56,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: color,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: hexCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'Hex',
-                        prefixText: '#',
-                      ),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                          RegExp(r'[0-9a-fA-F]'),
-                        ),
-                        LengthLimitingTextInputFormatter(6),
-                      ],
-                      onChanged: applyHex,
-                    ),
-                    const SizedBox(height: 8),
-                    _SliderRow(
-                      label: 'Tono',
-                      value: hsv.hue,
-                      max: 360,
-                      activeColor: HSVColor.fromAHSV(
-                        1,
-                        hsv.hue,
-                        1,
-                        1,
-                      ).toColor(),
-                      onChanged: (v) => applyHsv(hsv.withHue(v.clamp(0, 360))),
-                    ),
-                    _SliderRow(
-                      label: 'Saturación',
-                      value: hsv.saturation,
-                      max: 1,
-                      activeColor: color,
-                      onChanged: (v) =>
-                          applyHsv(hsv.withSaturation(v.clamp(0, 1))),
-                    ),
-                    _SliderRow(
-                      label: 'Brillo',
-                      value: hsv.value,
-                      max: 1,
-                      activeColor: color,
-                      onChanged: (v) => applyHsv(hsv.withValue(v.clamp(0, 1))),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text('Cancelar'),
-                ),
-                FilledButton(
-                  onPressed: () {
-                    final fromHex = CategoryStyle.normalizeHex(
-                      '#${hexCtrl.text}',
-                    );
-                    Navigator.pop(
-                      ctx,
-                      fromHex ?? CategoryStyle.hexFromColor(color),
-                    );
-                  },
-                  child: const Text('Usar'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
 }
 
 class _IconCell extends StatelessWidget {

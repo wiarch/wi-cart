@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../app_scope.dart';
-import '../history/history_page.dart';
 import '../lists/import_list_sheet.dart';
 import '../settings/settings_page.dart';
 import '../theme/app_theme.dart';
 
-/// Profile avatar opens overflow menu (Ajustes, Historial, …).
+/// Profile avatar opens overflow menu (Ajustes, importar, …).
 class AppMenuButton extends StatefulWidget {
   const AppMenuButton({super.key, this.onLogout});
 
@@ -58,13 +57,6 @@ class _AppMenuButtonState extends State<AppMenuButton> {
           );
           return;
         }
-        if (v == 'history') {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const HistoryPage()),
-          );
-          return;
-        }
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -79,14 +71,6 @@ class _AppMenuButtonState extends State<AppMenuButton> {
             contentPadding: EdgeInsets.zero,
             leading: Icon(Icons.content_paste_outlined),
             title: Text('Importar lista'),
-          ),
-        ),
-        PopupMenuItem(
-          value: 'history',
-          child: ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.history),
-            title: Text('Historial'),
           ),
         ),
         PopupMenuItem(

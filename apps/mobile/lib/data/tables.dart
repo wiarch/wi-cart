@@ -137,3 +137,17 @@ class SyncMeta extends Table {
   @override
   Set<Column> get primaryKey => {key};
 }
+
+/// Extra spend not tied to a shopping list (hortalizas, gastos puntuales).
+/// Local only: shortcut: not in the sync contract, add an entity when the API has one.
+class BudgetMovements extends Table {
+  TextColumn get id => text()();
+  TextColumn get label => text()();
+  RealColumn get amountUsd => real().named('amount_usd')();
+  DateTimeColumn get occurredAt => dateTime().named('occurred_at')();
+  DateTimeColumn get createdAt => dateTime().named('created_at')();
+  DateTimeColumn get updatedAt => dateTime().named('updated_at')();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}

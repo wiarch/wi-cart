@@ -48,12 +48,16 @@ class _InventarioPageState extends State<InventarioPage>
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: ListenableBuilder(
         listenable: _tabs,
-        builder: (context, _) => AddFab(
-          tooltip: _tabs.index == 0 ? 'Nuevo producto' : 'Nueva categoría',
-          onPressed: () => _tabs.index == 0
-              ? _productsKey.currentState?.openEditor()
-              : _categoriesKey.currentState?.openEditor(),
-        ),
+        builder: (context, _) {
+          final products = _tabs.index == 0;
+          return AddFab(
+            key: ValueKey(products ? 'product' : 'category'),
+            tooltip: products ? 'Nuevo producto' : 'Nueva categoría',
+            onPressed: () => products
+                ? _productsKey.currentState?.openEditor()
+                : _categoriesKey.currentState?.openEditor(),
+          );
+        },
       ),
       body: TabBarView(
         controller: _tabs,

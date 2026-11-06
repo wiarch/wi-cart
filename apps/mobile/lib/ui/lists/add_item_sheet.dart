@@ -10,6 +10,7 @@ import '../../data/repository.dart';
 import '../../utils/quantity_math.dart';
 import '../theme/app_theme.dart';
 import '../widgets/category_style.dart';
+import '../widgets/confirm_dialog.dart';
 import '../widgets/image_crop_page.dart';
 import '../widgets/money_text.dart';
 
@@ -79,21 +80,33 @@ Future<AddItemResult?> showAddItemSheet({
   required CartRepository repo,
   Product? product,
   bool showCart = true,
+  String? initialName,
+  double? initialQty,
+  double? initialPrice,
+  String? initialUnitId,
+  String? initialNote,
+  bool initialAddToCart = false,
+  Future<void> Function()? onDelete,
 }) async {
   final units = await repo.getUnits();
   var categories = await repo.getCategories();
   if (!context.mounted) return null;
   final rates = AppScope.of(context).rates;
 
-  final name = TextEditingController(text: product?.name ?? '');
-  final qty = TextEditingController(text: '1');
+  final editing = product != null || (initialName?.trim().isNotEmpty ?? false);
+  String qtyText(double q) =>
+      q % 1 == 0 ? q.toStringAsFixed(0) : q.toString();
+  final name = TextEditingController(text: initialName ?? product?.name ?? '');
+  final qty = TextEditingController(text: qtyText(initialQty ?? 1));
   final price = TextEditingController(
-    text: product?.basePrice?.toStringAsFixed(2) ?? '',
+    text: (initialPrice ?? product?.basePrice)?.toStringAsFixed(2) ?? '',
   );
-  final note = TextEditingController(text: product?.description ?? '');
+  final note =
+      TextEditingController(text: initialNote ?? product?.description ?? '');
   Product? selected = product;
-  Unit? selectedUnit = product?.unitId != null
-      ? units.where((u) => u.id == product!.unitId).firstOrNull
+  final unitId = initialUnitId ?? product?.unitId;
+  Unit? selectedUnit = unitId != null
+      ? units.where((u) => u.id == unitId).firstOrNull
       : null;
   selectedUnit ??= units.isNotEmpty
       ? units.firstWhere(
@@ -103,7 +116,7 @@ Future<AddItemResult?> showAddItemSheet({
       : null;
   String? categoryId = product?.categoryId;
   String? imagePath = product?.localImagePath;
-  bool addToCart = false;
+  bool addToCart = initialAddToCart;
   bool priceInBs = false; // price field currency; USD by default
   List<Product> suggestions = [];
   Timer? debounce;
@@ -111,6 +124,7 @@ Future<AddItemResult?> showAddItemSheet({
   return showModalBottomSheet<AddItemResult>(
     context: context,
     isScrollControlled: true,
+    enableDrag: false,
     backgroundColor: AppTheme.card,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -287,9 +301,7 @@ Future<AddItemResult?> showAddItemSheet({
                     children: [
                       Expanded(
                         child: Text(
-                          product == null
-                              ? 'Agregar Producto'
-                              : 'Editar Producto',
+                          editing ? 'Editar Producto' : 'Agregar Producto',
                           style: theme.textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
@@ -305,14 +317,13 @@ Future<AddItemResult?> showAddItemSheet({
                   const SizedBox(height: 8),
                   TextField(
                     controller: name,
-                    textInputAction: TextInputAction.done,
+                    textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
                       labelText: 'Producto',
                       hintText: 'Buscar o crear…',
                       prefixIcon: Icon(Icons.search),
                     ),
                     onChanged: onQuery,
-                    onSubmitted: (_) => submit(),
                   ),
                   if (suggestions.isNotEmpty) ...[
                     const SizedBox(height: 8),
@@ -375,14 +386,19 @@ Future<AddItemResult?> showAddItemSheet({
                       GestureDetector(
                         onTap: imagePath == null
                             ? null
-                            : () => Navigator.push(
-                                ctx,
-                                MaterialPageRoute(
-                                  fullscreenDialog: true,
-                                  builder: (_) =>
-                                      ImagePreviewPage(path: imagePath!),
-                                ),
-                              ),
+                            : () async {
+                                final next = await Navigator.push<String>(
+                                  ctx,
+                                  MaterialPageRoute(
+                                    fullscreenDialog: true,
+                                    builder: (_) =>
+                                        ImagePreviewPage(path: imagePath!),
+                                  ),
+                                );
+                                if (next != null && ctx.mounted) {
+                                  setLocal(() => imagePath = next);
+                                }
+                              },
                         child: Container(
                           width: 96,
                           height: 96,
@@ -643,10 +659,37 @@ Future<AddItemResult?> showAddItemSheet({
                   const SizedBox(height: 12),
                   Row(
                     children: [
+                      if (onDelete != null) ...[
+                        IconButton.filled(
+                          tooltip: 'Eliminar de la lista',
+                          icon: const Icon(Icons.delete_outline),
+                          style: IconButton.styleFrom(
+                            minimumSize: const Size(52, 52),
+                            backgroundColor:
+                                theme.colorScheme.error.withValues(alpha: 0.12),
+                            foregroundColor: theme.colorScheme.error,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ),
+                          onPressed: () async {
+                            final go = await confirmDialog(
+                              ctx,
+                              title: 'Eliminar de la lista',
+                              message:
+                                  'El producto sale de esta lista. Sigue en el inventario.',
+                            );
+                            if (go != true || !ctx.mounted) return;
+                            await onDelete();
+                            if (ctx.mounted) Navigator.pop(ctx);
+                          },
+                        ),
+                        const SizedBox(width: 12),
+                      ],
                       Expanded(
                         child: FilledButton(
                           onPressed: submit,
-                          child: const Text('Agregar'),
+                          child: Text(editing ? 'Guardar' : 'Agregar'),
                         ),
                       ),
                       if (showCart) ...[

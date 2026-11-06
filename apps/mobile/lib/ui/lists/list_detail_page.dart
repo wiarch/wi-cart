@@ -14,9 +14,13 @@ import '../widgets/money_text.dart';
 import '../widgets/search_field.dart';
 import '../widgets/soft_card.dart';
 import '../widgets/add_fab.dart';
+import '../widgets/confirm_dialog.dart';
 import '../widgets/icon_picker.dart';
+import '../widgets/image_crop_page.dart';
+import '../stores/store_dialogs.dart';
 import 'add_item_sheet.dart';
 import 'list_spend_page.dart';
+import 'share_list_dialog.dart';
 
 class ListDetailPage extends StatefulWidget {
   const ListDetailPage({
@@ -33,6 +37,7 @@ class ListDetailPage extends StatefulWidget {
 }
 
 class _ListDetailPageState extends State<ListDetailPage> {
+  String? _title;
   bool _cartExpanded = true;
   bool _searchOpen = false;
   bool _cartPulse = false;
@@ -42,6 +47,8 @@ class _ListDetailPageState extends State<ListDetailPage> {
   String? _filterKey;
   /// Item ids playing "fly to cart" / "return" animation.
   final Set<String> _flyingIds = {};
+  /// Long-press multi-select. Empty ⇒ selection mode off.
+  final Set<String> _selected = {};
   String? _cartToast;
   Timer? _cartToastTimer;
   final _searchCtrl = TextEditingController();
@@ -213,8 +220,22 @@ class _ListDetailPageState extends State<ListDetailPage> {
         return Scaffold(
           backgroundColor: AppTheme.bg,
           appBar: AppBar(
-            title: Text(widget.listName),
-            actions: [
+            automaticallyImplyLeading: _selected.isEmpty,
+            leading: _selected.isEmpty
+                ? null
+                : IconButton(
+                    tooltip: 'Cancelar',
+                    icon: const Icon(Icons.close),
+                    onPressed: () => setState(() => _selected.clear()),
+                  ),
+            title: Text(
+              _selected.isEmpty
+                  ? (_title ?? widget.listName)
+                  : '${_selected.length} seleccionados',
+            ),
+            actions: _selected.isNotEmpty
+                ? const []
+                : [
               IconButton(
                 tooltip: _searchOpen ? 'Cerrar búsqueda' : 'Buscar',
                 icon: Icon(_searchOpen ? Icons.search_off : Icons.search),
@@ -239,6 +260,19 @@ class _ListDetailPageState extends State<ListDetailPage> {
                     await _clone(context);
                   } else if (v == 'finalize') {
                     await _finalize(context);
+                  } else if (v == 'delete') {
+                    await _deleteList(context);
+                  } else if (v == 'edit') {
+                    final list = await repo.getList(widget.listId);
+                    if (!context.mounted || list == null) return;
+                    final name = await listNameDialog(context, list.name);
+                    if (name == null || !context.mounted) return;
+                    final sync = AppScope.of(context).sync;
+                    await repo.renameList(widget.listId, name);
+                    await sync.syncNow();
+                    if (mounted) setState(() => _title = name);
+                  } else if (v == 'share') {
+                    await shareListDialog(context, widget.listId);
                   } else if (v == 'icon') {
                     final list = await repo.getList(widget.listId);
                     if (!context.mounted) return;
@@ -268,10 +302,54 @@ class _ListDetailPageState extends State<ListDetailPage> {
                     ),
                   ),
                   PopupMenuDivider(),
-                  PopupMenuItem(value: 'clone', child: Text('Clonar lista')),
-                  PopupMenuItem(value: 'icon', child: Text('Cambiar icono')),
                   PopupMenuItem(
-                      value: 'finalize', child: Text('Finalizar compra')),
+                    value: 'edit',
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.edit_outlined),
+                      title: Text('Editar'),
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'share',
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.share_outlined),
+                      title: Text('Compartir lista'),
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'clone',
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.copy_outlined),
+                      title: Text('Clonar lista'),
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'icon',
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.interests_outlined),
+                      title: Text('Cambiar icono'),
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'finalize',
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.check_circle_outline),
+                      title: Text('Finalizar compra'),
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.delete_outline),
+                      title: Text('Eliminar lista'),
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -339,7 +417,37 @@ class _ListDetailPageState extends State<ListDetailPage> {
               AddFab(onPressed: () => _addItem(context)),
             ],
           ),
-          bottomNavigationBar: BottomAppBar(
+          bottomNavigationBar: _selected.isNotEmpty
+              ? BottomAppBar(
+                  height: 78,
+                  color: AppTheme.surface,
+                  elevation: 16,
+                  child: Row(
+                    children: [
+                      _BulkAction(
+                        icon: Icons.delete_outline,
+                        label: 'Eliminar',
+                        onTap: () => _deleteSelected(items),
+                      ),
+                      _BulkAction(
+                        icon: Icons.copy_outlined,
+                        label: 'Copiar',
+                        onTap: () => _copySelected(items),
+                      ),
+                      _BulkAction(
+                        icon: Icons.add_shopping_cart_outlined,
+                        label: 'Al carrito',
+                        onTap: () => _cartSelected(items),
+                      ),
+                    ],
+                  ),
+                )
+              : ListenableBuilder(
+            listenable: AppScope.of(context).rates,
+            builder: (context, _) {
+              final showTotal =
+                  AppScope.of(context).rates.showListGrandTotal;
+              return BottomAppBar(
             height: 78,
             color: AppTheme.surface,
             elevation: 16,
@@ -347,14 +455,15 @@ class _ListDetailPageState extends State<ListDetailPage> {
             padding: const EdgeInsets.symmetric(horizontal: 10),
             child: Row(
               children: [
-                Expanded(
-                  child: _TotalBlock(
-                    label: 'Total Lista',
-                    count: items.length,
-                    amount: listTotal,
-                    alignEnd: false,
+                if (showTotal)
+                  Expanded(
+                    child: _TotalBlock(
+                      label: 'Total Lista',
+                      count: items.length,
+                      amount: listTotal,
+                      alignEnd: false,
+                    ),
                   ),
-                ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   child: FilledButton.tonal(
@@ -386,9 +495,29 @@ class _ListDetailPageState extends State<ListDetailPage> {
                 ),
               ],
             ),
+          );
+            },
           ),
           body: Column(
             children: [
+              ListenableBuilder(
+                listenable: ListItemClipboard.instance,
+                builder: (context, _) {
+                  final n = ListItemClipboard.instance.items.length;
+                  if (n == 0 || _selected.isNotEmpty) {
+                    return const SizedBox.shrink();
+                  }
+                  return Material(
+                    color: AppTheme.sage.withValues(alpha: 0.35),
+                    child: ListTile(
+                      dense: true,
+                      leading: const Icon(Icons.content_paste_outlined),
+                      title: Text('Pegar $n en esta lista'),
+                      onTap: _pasteCopied,
+                    ),
+                  );
+                },
+              ),
               if (_searchOpen)
                 Material(
                   color: AppTheme.surface,
@@ -496,6 +625,8 @@ class _ListDetailPageState extends State<ListDetailPage> {
 
     final flying = _flyingIds.contains(item.id);
     final toCart = !inCart;
+    final selecting = _selected.isNotEmpty;
+    final marked = _selected.contains(item.id);
 
     Future<void> toggleCart() async {
       if (_flyingIds.contains(item.id)) return;
@@ -521,7 +652,7 @@ class _ListDetailPageState extends State<ListDetailPage> {
       await sync.syncNow();
     }
 
-    return AnimatedSlide(
+    final card = AnimatedSlide(
       duration: const Duration(milliseconds: 280),
       curve: Curves.easeInOutCubic,
       offset: flying
@@ -538,7 +669,9 @@ class _ListDetailPageState extends State<ListDetailPage> {
           child: SoftCard(
             color: inCart ? AppTheme.sage.withValues(alpha: 0.28) : null,
             padding: const EdgeInsets.fromLTRB(12, 6, 4, 6),
-            child: Row(
+            child: GestureDetector(
+              onLongPress: () => _toggleSelect(item.id),
+              child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 _leading(
@@ -547,6 +680,7 @@ class _ListDetailPageState extends State<ListDetailPage> {
                   catIcon,
                   onTap: () => _previewImage(
                     context,
+                    product: product,
                     path: product?.localImagePath,
                     name: item.name,
                     color: catColor,
@@ -559,7 +693,9 @@ class _ListDetailPageState extends State<ListDetailPage> {
                     color: Colors.transparent,
                     child: InkWell(
                       borderRadius: BorderRadius.circular(10),
-                      onTap: toggleCart,
+                      onTap: () => selecting
+                          ? _toggleSelect(item.id)
+                          : _editItem(context, item),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         child: Column(
@@ -602,53 +738,150 @@ class _ListDetailPageState extends State<ListDetailPage> {
                     ),
                   ),
                 ),
-                PopupMenuButton<String>(
-                  tooltip: 'Más',
-                  padding: EdgeInsets.zero,
-                  icon: const Icon(Icons.more_vert, size: 20),
-                  onSelected: (v) async {
-                    if (v == 'edit') {
-                      await _editQty(context, item);
-                      return;
-                    }
-                    if (v == 'delete') {
-                      final sync = AppScope.of(context).sync;
-                      await repo.deleteItem(item.id);
-                      await sync.syncNow();
-                    }
-                  },
-                  itemBuilder: (_) => [
-                    const PopupMenuItem(
-                      value: 'edit',
-                      child: ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: Icon(Icons.edit_outlined),
-                        title: Text('Editar'),
-                      ),
-                    ),
-                    PopupMenuItem(
-                      value: 'delete',
-                      child: ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: Icon(
-                          Icons.delete_outline,
-                          color: Theme.of(context).colorScheme.error,
-                        ),
-                        title: Text(
-                          'Eliminar',
-                          style: TextStyle(
-                              color: Theme.of(context).colorScheme.error),
-                        ),
-                      ),
-                    ),
-                  ],
+                Checkbox(
+                  value: selecting ? marked : inCart,
+                  activeColor: AppTheme.sage,
+                  visualDensity: VisualDensity.compact,
+                  onChanged: (_) => selecting
+                      ? _toggleSelect(item.id)
+                      : toggleCart(),
                 ),
               ],
+            ),
             ),
           ),
         ),
       ),
     );
+
+    return Dismissible(
+      key: ValueKey('swipe-${item.id}'),
+      direction: inCart || selecting
+          ? DismissDirection.none
+          : DismissDirection.startToEnd,
+      dismissThresholds: const {DismissDirection.startToEnd: 0.32},
+      movementDuration: const Duration(milliseconds: 220),
+      resizeDuration: Duration.zero,
+      confirmDismiss: (_) async {
+        await _swipeToCart(item);
+        return false;
+      },
+      background: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        padding: const EdgeInsets.only(left: 22),
+        alignment: Alignment.centerLeft,
+        decoration: BoxDecoration(
+          color: AppTheme.sage,
+          borderRadius: BorderRadius.circular(AppTheme.radius),
+        ),
+        child: const Icon(Icons.shopping_cart, color: AppTheme.ink800, size: 28),
+      ),
+      child: card,
+    );
+  }
+
+  void _toggleSelect(String id) {
+    setState(() {
+      if (!_selected.add(id)) _selected.remove(id);
+    });
+  }
+
+  Future<void> _swipeToCart(ListItem item) async {
+    if (item.status == 'in_cart' || _flyingIds.contains(item.id)) return;
+    final scope = AppScope.of(context);
+    setState(() {
+      _cartExpanded = true;
+      _cartPulse = true;
+    });
+    await scope.repo.setItemStatus(item, 'in_cart');
+    if (!mounted) return;
+    _showCartToast(item.name);
+    Future<void>.delayed(const Duration(milliseconds: 700), () {
+      if (mounted) setState(() => _cartPulse = false);
+    });
+    unawaited(scope.sync.syncNow());
+  }
+
+  Future<void> _deleteSelected(List<ListItem> items) async {
+    final ids = items
+        .where((i) => _selected.contains(i.id))
+        .map((i) => i.id)
+        .toList();
+    if (ids.isEmpty || !mounted) return;
+    final ok = await confirmDialog(
+      context,
+      title: 'Eliminar',
+      message: ids.length == 1
+          ? 'Se quita 1 producto de la lista.'
+          : 'Se quitan ${ids.length} productos de la lista.',
+    );
+    if (ok != true || !mounted) return;
+    final scope = AppScope.of(context);
+    for (final id in ids) {
+      await scope.repo.deleteItem(id);
+    }
+    await scope.sync.syncNow();
+    if (mounted) setState(() => _selected.clear());
+  }
+
+  void _copySelected(List<ListItem> items) {
+    final picked = items.where((i) => _selected.contains(i.id)).toList();
+    if (picked.isEmpty) return;
+    ListItemClipboard.instance.setItems(picked);
+    setState(() => _selected.clear());
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          picked.length == 1
+              ? '1 producto copiado. Pégalo en otra lista.'
+              : '${picked.length} productos copiados. Pégalos en otra lista.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _cartSelected(List<ListItem> items) async {
+    final picked = items
+        .where((i) => _selected.contains(i.id) && i.status != 'in_cart')
+        .toList();
+    final scope = AppScope.of(context);
+    for (final item in picked) {
+      await scope.repo.setItemStatus(item, 'in_cart');
+    }
+    if (picked.isNotEmpty) await scope.sync.syncNow();
+    if (!mounted) return;
+    setState(() {
+      _selected.clear();
+      if (picked.isNotEmpty) {
+        _cartExpanded = true;
+        _cartPulse = true;
+      }
+    });
+    if (picked.isNotEmpty) {
+      Future<void>.delayed(const Duration(milliseconds: 700), () {
+        if (mounted) setState(() => _cartPulse = false);
+      });
+    }
+  }
+
+  Future<void> _pasteCopied() async {
+    final clip = List.of(ListItemClipboard.instance.items);
+    if (clip.isEmpty || !mounted) return;
+    final scope = AppScope.of(context);
+    for (final i in clip) {
+      await scope.repo.addItem(
+        listId: widget.listId,
+        name: i.name,
+        productId: i.productId,
+        unitId: i.unitId,
+        unitAbbr: i.unitAbbr,
+        qtyPlanned: i.qtyPlanned,
+        unitPrice: i.unitPrice,
+        notes: i.notes,
+      );
+    }
+    await scope.sync.syncNow();
+    ListItemClipboard.instance.clear();
   }
 
   Widget _leading(
@@ -699,11 +932,36 @@ class _ListDetailPageState extends State<ListDetailPage> {
 
   Future<void> _previewImage(
     BuildContext context, {
+    Product? product,
     required String? path,
     required String name,
     required Color color,
     required IconData icon,
   }) async {
+    if (!kIsWeb && path != null && path.isNotEmpty && File(path).existsSync()) {
+      final next = await Navigator.push<String>(
+        context,
+        MaterialPageRoute(
+          fullscreenDialog: true,
+          builder: (_) => ImageCropPage(sourcePath: path),
+        ),
+      );
+      if (next == null || product == null || !context.mounted) return;
+      final scope = AppScope.of(context);
+      await scope.repo.upsertProduct(
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        categoryId: product.categoryId,
+        unitId: product.unitId,
+        basePrice: product.basePrice,
+        localImagePath: next,
+        imagePending: true,
+      );
+      await scope.sync.syncNow();
+      await _loadLookups();
+      return;
+    }
     Widget body;
     if (!kIsWeb && path != null && path.isNotEmpty) {
       try {
@@ -766,22 +1024,25 @@ class _ListDetailPageState extends State<ListDetailPage> {
     );
   }
 
+  Future<void> _deleteList(BuildContext context) async {
+    final ok = await confirmDialog(
+      context,
+      title: 'Eliminar lista',
+      message: 'La lista se elimina. Los productos se quedan en el inventario.',
+    );
+    if (ok != true || !context.mounted) return;
+    final scope = AppScope.of(context);
+    await scope.repo.deleteList(widget.listId);
+    await scope.sync.syncNow();
+    if (context.mounted) Navigator.pop(context);
+  }
+
   Future<void> _clearCart(BuildContext context) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Limpiar carrito'),
-        content: const Text(
-            'Mueve todos los ítems del carrito a Pendiente.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancelar')),
-          FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Limpiar')),
-        ],
-      ),
+    final ok = await confirmDialog(
+      context,
+      title: 'Limpiar carrito',
+      message: 'Mueve todos los ítems del carrito a Pendiente.',
+      confirm: 'Limpiar',
     );
     if (ok != true || !context.mounted) return;
     final scope = AppScope.of(context);
@@ -791,20 +1052,10 @@ class _ListDetailPageState extends State<ListDetailPage> {
 
   Future<void> _deleteCompleted(
       BuildContext context, List<ListItem> cart) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Eliminar comprados'),
-        content: Text('Elimina ${cart.length} ítems del carrito.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancelar')),
-          FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Eliminar')),
-        ],
-      ),
+    final ok = await confirmDialog(
+      context,
+      title: 'Eliminar comprados',
+      message: 'Elimina ${cart.length} ítems del carrito.',
     );
     if (ok != true || !context.mounted) return;
     final scope = AppScope.of(context);
@@ -830,20 +1081,11 @@ class _ListDetailPageState extends State<ListDetailPage> {
 
   Future<void> _finalize(BuildContext context) async {
     final repo = AppScope.of(context).repo;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Finalizar compra'),
-        content: const Text('Se guardará el carrito en el historial.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancelar')),
-          FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Finalizar')),
-        ],
-      ),
+    final ok = await confirmDialog(
+      context,
+      title: 'Finalizar compra',
+      message: 'Se guardará el carrito en el historial.',
+      confirm: 'Finalizar',
     );
     if (ok != true || !context.mounted) return;
     try {
@@ -882,52 +1124,47 @@ class _ListDetailPageState extends State<ListDetailPage> {
     await _loadLookups();
   }
 
-  Future<void> _editQty(BuildContext context, ListItem item) async {
-    final qty = TextEditingController(
-        text: (item.status == 'in_cart'
-                ? (item.qtyBought ?? item.qtyPlanned)
-                : item.qtyPlanned)
-            .toString());
-    final price =
-        TextEditingController(text: (item.unitPrice ?? 0).toStringAsFixed(2));
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(item.name),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-                controller: qty,
-                decoration: const InputDecoration(labelText: 'Cantidad')),
-            const SizedBox(height: 12),
-            TextField(
-                controller: price,
-                decoration: const InputDecoration(
-                    labelText: 'Precio unitario (USD)')),
-          ],
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancelar')),
-          FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Guardar')),
-        ],
-      ),
-    );
-    if (ok != true || !context.mounted) return;
+  Future<void> _editItem(BuildContext context, ListItem item) async {
     final scope = AppScope.of(context);
-    final q = double.tryParse(qty.text.replaceAll(',', '.'));
-    final p = double.tryParse(price.text.replaceAll(',', '.'));
-    await scope.repo.updateItemQty(
+    final product = item.productId == null
+        ? null
+        : (_products[item.productId] ??
+            await scope.repo.getProduct(item.productId!));
+    if (!context.mounted) return;
+    final qty = item.status == 'in_cart'
+        ? (item.qtyBought ?? item.qtyPlanned)
+        : item.qtyPlanned;
+    final result = await showAddItemSheet(
+      context: context,
+      repo: scope.repo,
+      product: product,
+      initialName: item.name,
+      initialQty: qty,
+      initialPrice: item.unitPrice,
+      initialUnitId: item.unitId,
+      initialNote: item.notes ?? product?.description,
+      initialAddToCart: item.status == 'in_cart',
+      onDelete: () async {
+        await scope.repo.deleteItem(item.id);
+        await scope.sync.syncNow();
+      },
+    );
+    if (result == null || !context.mounted) return;
+    await scope.repo.updateListItem(
       item: item,
-      qtyPlanned: item.status == 'pending' ? q : null,
-      qtyBought: item.status == 'in_cart' ? q : null,
-      unitPrice: p,
+      name: result.name,
+      productId: result.productId ?? item.productId,
+      unitId: result.unitId,
+      unitAbbr: result.unitAbbr,
+      categoryId: result.categoryId,
+      qty: result.qty,
+      unitPrice: result.unitPrice,
+      description: result.note,
+      localImagePath: result.imagePath,
+      addToCart: result.addToCart,
     );
     await scope.sync.syncNow();
+    await _loadLookups();
   }
 }
 
@@ -1191,7 +1428,7 @@ class _ProgressHeader extends StatelessWidget {
   }
 }
 
-/// Horizontal category chips; tapping the active chip clears the filter.
+/// Horizontal category chips. "Todas" clears the filter.
 class _CategoryFilter extends StatelessWidget {
   const _CategoryFilter({
     required this.keys,
@@ -1209,29 +1446,56 @@ class _CategoryFilter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (keys.length < 2) return const SizedBox.shrink();
+    if (keys.isEmpty) return const SizedBox.shrink();
     return SizedBox(
-      height: 44,
+      height: 48,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
         children: [
+          _chip(
+            label: 'Todas',
+            selected: selected == null,
+            onTap: () => onSelect(null),
+          ),
           for (final k in keys)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: ChoiceChip(
-                label: Text(labelFor(k)),
-                avatar: CircleAvatar(
-                  radius: 5,
-                  backgroundColor: colorFor(k),
-                ),
-                selected: selected == k,
-                showCheckmark: false,
-                selectedColor: AppTheme.sage.withValues(alpha: 0.22),
-                onSelected: (on) => onSelect(on ? k : null),
-              ),
+            _chip(
+              label: labelFor(k),
+              color: colorFor(k),
+              selected: selected == k,
+              onTap: () => onSelect(k),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _chip({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+    Color? color,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: ChoiceChip(
+        label: Text(label),
+        avatar: color == null
+            ? null
+            : CircleAvatar(radius: 5, backgroundColor: color),
+        selected: selected,
+        showCheckmark: false,
+        backgroundColor: Colors.white,
+        selectedColor: AppTheme.ink700,
+        side: BorderSide(
+          color: selected ? AppTheme.ink700 : AppTheme.borderSubtle,
+          width: selected ? 2 : 1,
+        ),
+        labelStyle: TextStyle(
+          color: selected ? AppTheme.mint : AppTheme.ink700,
+          fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+        ),
+        onSelected: (_) => onTap(),
       ),
     );
   }
@@ -1274,6 +1538,63 @@ class _TotalBlock extends StatelessWidget {
               ),
         ),
       ],
+    );
+  }
+}
+
+/// Items copied from a list, ready to paste into another.
+class ListItemClipboard extends ChangeNotifier {
+  ListItemClipboard._();
+  static final instance = ListItemClipboard._();
+
+  final List<ListItem> items = [];
+
+  void setItems(List<ListItem> next) {
+    items
+      ..clear()
+      ..addAll(next);
+    notifyListeners();
+  }
+
+  void clear() {
+    if (items.isEmpty) return;
+    items.clear();
+    notifyListeners();
+  }
+}
+
+class _BulkAction extends StatelessWidget {
+  const _BulkAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: AppTheme.ink700),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: const TextStyle(
+                color: AppTheme.ink700,
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

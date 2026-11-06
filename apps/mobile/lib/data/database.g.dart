@@ -6693,6 +6693,416 @@ class SyncMetaCompanion extends UpdateCompanion<SyncMetaData> {
   }
 }
 
+class $BudgetMovementsTable extends BudgetMovements
+    with TableInfo<$BudgetMovementsTable, BudgetMovement> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $BudgetMovementsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _labelMeta = const VerificationMeta('label');
+  @override
+  late final GeneratedColumn<String> label = GeneratedColumn<String>(
+    'label',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _amountUsdMeta = const VerificationMeta(
+    'amountUsd',
+  );
+  @override
+  late final GeneratedColumn<double> amountUsd = GeneratedColumn<double>(
+    'amount_usd',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _occurredAtMeta = const VerificationMeta(
+    'occurredAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> occurredAt = GeneratedColumn<DateTime>(
+    'occurred_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    label,
+    amountUsd,
+    occurredAt,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'budget_movements';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<BudgetMovement> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('label')) {
+      context.handle(
+        _labelMeta,
+        label.isAcceptableOrUnknown(data['label']!, _labelMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_labelMeta);
+    }
+    if (data.containsKey('amount_usd')) {
+      context.handle(
+        _amountUsdMeta,
+        amountUsd.isAcceptableOrUnknown(data['amount_usd']!, _amountUsdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_amountUsdMeta);
+    }
+    if (data.containsKey('occurred_at')) {
+      context.handle(
+        _occurredAtMeta,
+        occurredAt.isAcceptableOrUnknown(data['occurred_at']!, _occurredAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_occurredAtMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  BudgetMovement map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return BudgetMovement(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      label: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}label'],
+      )!,
+      amountUsd: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}amount_usd'],
+      )!,
+      occurredAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}occurred_at'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $BudgetMovementsTable createAlias(String alias) {
+    return $BudgetMovementsTable(attachedDatabase, alias);
+  }
+}
+
+class BudgetMovement extends DataClass implements Insertable<BudgetMovement> {
+  final String id;
+  final String label;
+  final double amountUsd;
+  final DateTime occurredAt;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const BudgetMovement({
+    required this.id,
+    required this.label,
+    required this.amountUsd,
+    required this.occurredAt,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['label'] = Variable<String>(label);
+    map['amount_usd'] = Variable<double>(amountUsd);
+    map['occurred_at'] = Variable<DateTime>(occurredAt);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  BudgetMovementsCompanion toCompanion(bool nullToAbsent) {
+    return BudgetMovementsCompanion(
+      id: Value(id),
+      label: Value(label),
+      amountUsd: Value(amountUsd),
+      occurredAt: Value(occurredAt),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory BudgetMovement.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return BudgetMovement(
+      id: serializer.fromJson<String>(json['id']),
+      label: serializer.fromJson<String>(json['label']),
+      amountUsd: serializer.fromJson<double>(json['amountUsd']),
+      occurredAt: serializer.fromJson<DateTime>(json['occurredAt']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'label': serializer.toJson<String>(label),
+      'amountUsd': serializer.toJson<double>(amountUsd),
+      'occurredAt': serializer.toJson<DateTime>(occurredAt),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  BudgetMovement copyWith({
+    String? id,
+    String? label,
+    double? amountUsd,
+    DateTime? occurredAt,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => BudgetMovement(
+    id: id ?? this.id,
+    label: label ?? this.label,
+    amountUsd: amountUsd ?? this.amountUsd,
+    occurredAt: occurredAt ?? this.occurredAt,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  BudgetMovement copyWithCompanion(BudgetMovementsCompanion data) {
+    return BudgetMovement(
+      id: data.id.present ? data.id.value : this.id,
+      label: data.label.present ? data.label.value : this.label,
+      amountUsd: data.amountUsd.present ? data.amountUsd.value : this.amountUsd,
+      occurredAt: data.occurredAt.present
+          ? data.occurredAt.value
+          : this.occurredAt,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BudgetMovement(')
+          ..write('id: $id, ')
+          ..write('label: $label, ')
+          ..write('amountUsd: $amountUsd, ')
+          ..write('occurredAt: $occurredAt, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, label, amountUsd, occurredAt, createdAt, updatedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is BudgetMovement &&
+          other.id == this.id &&
+          other.label == this.label &&
+          other.amountUsd == this.amountUsd &&
+          other.occurredAt == this.occurredAt &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class BudgetMovementsCompanion extends UpdateCompanion<BudgetMovement> {
+  final Value<String> id;
+  final Value<String> label;
+  final Value<double> amountUsd;
+  final Value<DateTime> occurredAt;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const BudgetMovementsCompanion({
+    this.id = const Value.absent(),
+    this.label = const Value.absent(),
+    this.amountUsd = const Value.absent(),
+    this.occurredAt = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  BudgetMovementsCompanion.insert({
+    required String id,
+    required String label,
+    required double amountUsd,
+    required DateTime occurredAt,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       label = Value(label),
+       amountUsd = Value(amountUsd),
+       occurredAt = Value(occurredAt),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<BudgetMovement> custom({
+    Expression<String>? id,
+    Expression<String>? label,
+    Expression<double>? amountUsd,
+    Expression<DateTime>? occurredAt,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (label != null) 'label': label,
+      if (amountUsd != null) 'amount_usd': amountUsd,
+      if (occurredAt != null) 'occurred_at': occurredAt,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  BudgetMovementsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? label,
+    Value<double>? amountUsd,
+    Value<DateTime>? occurredAt,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return BudgetMovementsCompanion(
+      id: id ?? this.id,
+      label: label ?? this.label,
+      amountUsd: amountUsd ?? this.amountUsd,
+      occurredAt: occurredAt ?? this.occurredAt,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (label.present) {
+      map['label'] = Variable<String>(label.value);
+    }
+    if (amountUsd.present) {
+      map['amount_usd'] = Variable<double>(amountUsd.value);
+    }
+    if (occurredAt.present) {
+      map['occurred_at'] = Variable<DateTime>(occurredAt.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BudgetMovementsCompanion(')
+          ..write('id: $id, ')
+          ..write('label: $label, ')
+          ..write('amountUsd: $amountUsd, ')
+          ..write('occurredAt: $occurredAt, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -6708,6 +7118,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
       $PurchaseHistoryItemsTable(this);
   late final $SyncOutboxTable syncOutbox = $SyncOutboxTable(this);
   late final $SyncMetaTable syncMeta = $SyncMetaTable(this);
+  late final $BudgetMovementsTable budgetMovements = $BudgetMovementsTable(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -6723,6 +7136,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     purchaseHistoryItems,
     syncOutbox,
     syncMeta,
+    budgetMovements,
   ];
 }
 
@@ -9919,6 +10333,233 @@ typedef $$SyncMetaTableProcessedTableManager =
       SyncMetaData,
       PrefetchHooks Function()
     >;
+typedef $$BudgetMovementsTableCreateCompanionBuilder =
+    BudgetMovementsCompanion Function({
+      required String id,
+      required String label,
+      required double amountUsd,
+      required DateTime occurredAt,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<int> rowid,
+    });
+typedef $$BudgetMovementsTableUpdateCompanionBuilder =
+    BudgetMovementsCompanion Function({
+      Value<String> id,
+      Value<String> label,
+      Value<double> amountUsd,
+      Value<DateTime> occurredAt,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+class $$BudgetMovementsTableFilterComposer
+    extends Composer<_$AppDatabase, $BudgetMovementsTable> {
+  $$BudgetMovementsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get amountUsd => $composableBuilder(
+    column: $table.amountUsd,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get occurredAt => $composableBuilder(
+    column: $table.occurredAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$BudgetMovementsTableOrderingComposer
+    extends Composer<_$AppDatabase, $BudgetMovementsTable> {
+  $$BudgetMovementsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get amountUsd => $composableBuilder(
+    column: $table.amountUsd,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get occurredAt => $composableBuilder(
+    column: $table.occurredAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$BudgetMovementsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $BudgetMovementsTable> {
+  $$BudgetMovementsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get label =>
+      $composableBuilder(column: $table.label, builder: (column) => column);
+
+  GeneratedColumn<double> get amountUsd =>
+      $composableBuilder(column: $table.amountUsd, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get occurredAt => $composableBuilder(
+    column: $table.occurredAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$BudgetMovementsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $BudgetMovementsTable,
+          BudgetMovement,
+          $$BudgetMovementsTableFilterComposer,
+          $$BudgetMovementsTableOrderingComposer,
+          $$BudgetMovementsTableAnnotationComposer,
+          $$BudgetMovementsTableCreateCompanionBuilder,
+          $$BudgetMovementsTableUpdateCompanionBuilder,
+          (
+            BudgetMovement,
+            BaseReferences<
+              _$AppDatabase,
+              $BudgetMovementsTable,
+              BudgetMovement
+            >,
+          ),
+          BudgetMovement,
+          PrefetchHooks Function()
+        > {
+  $$BudgetMovementsTableTableManager(
+    _$AppDatabase db,
+    $BudgetMovementsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$BudgetMovementsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$BudgetMovementsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$BudgetMovementsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> label = const Value.absent(),
+                Value<double> amountUsd = const Value.absent(),
+                Value<DateTime> occurredAt = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => BudgetMovementsCompanion(
+                id: id,
+                label: label,
+                amountUsd: amountUsd,
+                occurredAt: occurredAt,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String label,
+                required double amountUsd,
+                required DateTime occurredAt,
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => BudgetMovementsCompanion.insert(
+                id: id,
+                label: label,
+                amountUsd: amountUsd,
+                occurredAt: occurredAt,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$BudgetMovementsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $BudgetMovementsTable,
+      BudgetMovement,
+      $$BudgetMovementsTableFilterComposer,
+      $$BudgetMovementsTableOrderingComposer,
+      $$BudgetMovementsTableAnnotationComposer,
+      $$BudgetMovementsTableCreateCompanionBuilder,
+      $$BudgetMovementsTableUpdateCompanionBuilder,
+      (
+        BudgetMovement,
+        BaseReferences<_$AppDatabase, $BudgetMovementsTable, BudgetMovement>,
+      ),
+      BudgetMovement,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -9943,4 +10584,6 @@ class $AppDatabaseManager {
       $$SyncOutboxTableTableManager(_db, _db.syncOutbox);
   $$SyncMetaTableTableManager get syncMeta =>
       $$SyncMetaTableTableManager(_db, _db.syncMeta);
+  $$BudgetMovementsTableTableManager get budgetMovements =>
+      $$BudgetMovementsTableTableManager(_db, _db.budgetMovements);
 }

@@ -27,7 +27,10 @@ class ProductsPage extends StatefulWidget {
   State<ProductsPage> createState() => ProductsPageState();
 }
 
-class ProductsPageState extends State<ProductsPage> {
+class ProductsPageState extends State<ProductsPage>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => widget.embedded;
   // Cached: a new stream per build restarts StreamBuilder (spinner flicker).
   Stream<(List<Product>, List<Category>)>? _stream;
   final _search = TextEditingController();
@@ -42,6 +45,7 @@ class ProductsPageState extends State<ProductsPage> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final scope = AppScope.of(context);
     final repo = scope.repo;
     _stream ??= combineLatest2(

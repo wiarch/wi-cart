@@ -6,11 +6,14 @@ import '../../data/database.dart';
 import '../../utils/spend_math.dart';
 import '../theme/app_theme.dart';
 import '../widgets/category_style.dart';
+import '../widgets/confirm_dialog.dart';
 import '../widgets/icon_picker.dart';
 import '../widgets/money_text.dart';
 import '../widgets/soft_card.dart';
+import '../stores/store_dialogs.dart';
 import 'list_detail_page.dart';
 import 'list_spend_page.dart';
+import 'share_list_dialog.dart';
 
 final _dateFmt = DateFormat('dd/MM/yyyy HH:mm');
 
@@ -78,10 +81,11 @@ class ListCard extends StatelessWidget {
                   style: muted,
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  'Total: ${moneySubtitle(rates, totals.$1)}',
-                  style: theme.textTheme.labelMedium,
-                ),
+                if (rates.showListGrandTotal)
+                  Text(
+                    'Total: ${moneySubtitle(rates, totals.$1)}',
+                    style: theme.textTheme.labelMedium,
+                  ),
                 Text(
                   'Carrito: ${moneySubtitle(rates, totals.$2)}',
                   style: theme.textTheme.labelMedium,
@@ -92,9 +96,54 @@ class ListCard extends StatelessWidget {
           PopupMenuButton<String>(
             onSelected: (v) => runListMenu(context, list, v),
             itemBuilder: (_) => const [
-              PopupMenuItem(value: 'clone', child: Text('Clonar lista')),
-              PopupMenuItem(value: 'icon', child: Text('Cambiar icono')),
-              PopupMenuItem(value: 'spend', child: Text('Ver gastos')),
+              PopupMenuItem(
+                value: 'edit',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.edit_outlined),
+                  title: Text('Editar'),
+                ),
+              ),
+              PopupMenuItem(
+                value: 'share',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.share_outlined),
+                  title: Text('Compartir lista'),
+                ),
+              ),
+              PopupMenuItem(
+                value: 'clone',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.copy_outlined),
+                  title: Text('Clonar lista'),
+                ),
+              ),
+              PopupMenuItem(
+                value: 'icon',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.interests_outlined),
+                  title: Text('Cambiar icono'),
+                ),
+              ),
+              PopupMenuItem(
+                value: 'spend',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.pie_chart_outline),
+                  title: Text('Ver gastos'),
+                ),
+              ),
+              PopupMenuItem(
+                value: 'delete',
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(Icons.delete_outline),
+                  title: Text('Eliminar lista'),
+                ),
+              ),
             ],
           ),
         ],
@@ -107,6 +156,13 @@ class ListCard extends StatelessWidget {
 Future<void> runListMenu(BuildContext context, ShoppingList l, String v) async {
   final scope = AppScope.of(context);
   switch (v) {
+    case 'edit':
+      final name = await listNameDialog(context, l.name);
+      if (name == null || !context.mounted) return;
+      await scope.repo.renameList(l.id, name);
+      await scope.sync.syncNow();
+    case 'share':
+      await shareListDialog(context, l.id);
     case 'clone':
       final clone = await scope.repo.cloneList(l.id);
       await scope.sync.syncNow();
@@ -130,5 +186,15 @@ Future<void> runListMenu(BuildContext context, ShoppingList l, String v) async {
           builder: (_) => ListSpendPage(listId: l.id, listName: l.name),
         ),
       );
+    case 'delete':
+      final ok = await confirmDialog(
+        context,
+        title: 'Eliminar lista',
+        message:
+            'La lista se elimina. Los productos se quedan en el inventario.',
+      );
+      if (ok != true || !context.mounted) return;
+      await scope.repo.deleteList(l.id);
+      await scope.sync.syncNow();
   }
 }

@@ -120,6 +120,26 @@ class ApiClient {
     return res.data as Map<String, dynamic>;
   }
 
+  /// Copy [listId] onto the account with [username]. The other device
+  /// receives it on the next sync pull.
+  Future<void> shareList({
+    required String listId,
+    required String username,
+  }) async {
+    await _dio.post('/api/lists/$listId/share', data: {
+      'username': username,
+    });
+  }
+
+  Future<void> shareStore({
+    required String storeId,
+    required String username,
+  }) async {
+    await _dio.post('/api/stores/$storeId/share', data: {
+      'username': username,
+    });
+  }
+
   Future<Map<String, dynamic>> uploadProductImage({
     required String productId,
     required String filePath,

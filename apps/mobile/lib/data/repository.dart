@@ -358,6 +358,31 @@ class CartRepository {
         .getSingle());
   }
 
+  /// Soft-deletes the store and every list that belongs to it.
+  /// Products stay in the inventory.
+  Future<void> deleteStore(String id) async {
+    final lists = await (db.select(db.shoppingLists)
+          ..where((t) => t.storeId.equals(id) & t.deletedAt.isNull()))
+        .get();
+    for (final list in lists) {
+      await deleteList(list.id);
+    }
+    final now = _now;
+    await (db.update(db.stores)..where((t) => t.id.equals(id))).write(
+      StoresCompanion(
+        deletedAt: Value(now),
+        clientUpdatedAt: Value(now),
+        updatedAt: Value(now),
+      ),
+    );
+    await outbox.enqueue(
+      entity: 'stores',
+      entityId: id,
+      op: SyncOp.delete,
+      clientUpdatedAt: now,
+    );
+  }
+
   Future<void> renameStore(String id, String name) async {
     final now = _now;
     await (db.update(db.stores)..where((t) => t.id.equals(id))).write(
@@ -416,6 +441,57 @@ class CartRepository {
         .getSingle());
   }
 
+  /// Soft-deletes the list and its items. Products are not deleted.
+  Future<void> deleteList(String id) async {
+    final items = await getItems(id);
+    for (final item in items) {
+      await deleteItem(item.id);
+    }
+    final now = _now;
+    await (db.update(db.shoppingLists)..where((t) => t.id.equals(id))).write(
+      ShoppingListsCompanion(
+        deletedAt: Value(now),
+        clientUpdatedAt: Value(now),
+        updatedAt: Value(now),
+      ),
+    );
+    await outbox.enqueue(
+      entity: 'shopping_lists',
+      entityId: id,
+      op: SyncOp.delete,
+      clientUpdatedAt: now,
+    );
+  }
+
+  Future<void> renameList(String id, String name) async {
+    final now = _now;
+    final list = await getList(id);
+    if (list == null) return;
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return;
+    await (db.update(db.shoppingLists)..where((t) => t.id.equals(id))).write(
+      ShoppingListsCompanion(
+        name: Value(trimmed),
+        clientUpdatedAt: Value(now),
+        updatedAt: Value(now),
+      ),
+    );
+    await outbox.enqueue(
+      entity: 'shopping_lists',
+      entityId: id,
+      op: SyncOp.update,
+      clientUpdatedAt: now,
+      payload: {
+        'name': trimmed,
+        'status': list.status,
+        'notes': list.notes,
+        'icon': list.icon,
+        'store_id': list.storeId,
+        'store_location': list.storeLocation,
+      },
+    );
+  }
+
   Future<void> setListIcon(String listId, String? icon) async {
     final now = _now;
     final list = await getList(listId);
@@ -439,6 +515,45 @@ class CartRepository {
         'icon': icon,
       },
     );
+  }
+
+  Stream<List<BudgetMovement>> watchBudgetMovements() {
+    return (db.select(db.budgetMovements)
+          ..orderBy([(t) => OrderingTerm.desc(t.occurredAt)]))
+        .watch();
+  }
+
+  Future<void> addBudgetMovement({
+    required String label,
+    required double amountUsd,
+  }) async {
+    final now = _now;
+    await db.into(db.budgetMovements).insert(BudgetMovementsCompanion.insert(
+          id: _uuid.v4(),
+          label: label.trim(),
+          amountUsd: amountUsd,
+          occurredAt: now,
+          createdAt: now,
+          updatedAt: now,
+        ));
+  }
+
+  Future<void> updateBudgetMovement(
+    String id, {
+    required String label,
+    required double amountUsd,
+  }) async {
+    await (db.update(db.budgetMovements)..where((t) => t.id.equals(id))).write(
+      BudgetMovementsCompanion(
+        label: Value(label.trim()),
+        amountUsd: Value(amountUsd),
+        updatedAt: Value(_now),
+      ),
+    );
+  }
+
+  Future<void> deleteBudgetMovement(String id) {
+    return (db.delete(db.budgetMovements)..where((t) => t.id.equals(id))).go();
   }
 
   /// All non-deleted list items across lists (for summaries/charts).
@@ -584,7 +699,38 @@ class CartRepository {
         .get();
   }
 
-  Future<ShoppingList> cloneList(String listId, {String? newName}) async {
+  Future<Store> cloneStore(String id) async {
+    final source = await (db.select(db.stores)..where((t) => t.id.equals(id)))
+        .getSingleOrNull();
+    if (source == null || source.deletedAt != null) {
+      throw StateError('Tienda no encontrada');
+    }
+    final clone = await createStore(
+      name: '${source.name} (copia)',
+      location: source.location,
+      icon: source.icon,
+      notes: source.notes,
+    );
+    final lists = await (db.select(db.shoppingLists)
+          ..where((t) => t.storeId.equals(id) & t.deletedAt.isNull()))
+        .get();
+    for (final list in lists) {
+      await cloneList(
+        list.id,
+        newName: list.name,
+        storeId: clone.id,
+        remember: false,
+      );
+    }
+    return clone;
+  }
+
+  Future<ShoppingList> cloneList(
+    String listId, {
+    String? newName,
+    String? storeId,
+    bool remember = true,
+  }) async {
     final source = await getList(listId);
     if (source == null) throw StateError('Lista no encontrada');
     final items = await getItems(listId);
@@ -593,7 +739,7 @@ class CartRepository {
           ? newName!.trim()
           : '${source.name} (copia)',
       icon: source.icon,
-      storeId: source.storeId,
+      storeId: storeId ?? source.storeId,
     );
     for (final i in items) {
       await addItem(
@@ -606,7 +752,7 @@ class CartRepository {
         unitPrice: i.unitPrice,
       );
     }
-    await rememberLastList(clone.id);
+    if (remember) await rememberLastList(clone.id);
     return clone;
   }
 
@@ -694,6 +840,90 @@ class CartRepository {
         'qty_bought': bought,
         'unit_price': price,
         'status': item.status,
+      },
+    );
+  }
+
+  /// Writes list-line fields and the linked catalog product.
+  Future<void> updateListItem({
+    required ListItem item,
+    required String name,
+    String? productId,
+    String? unitId,
+    String? unitAbbr,
+    String? categoryId,
+    double qty = 1,
+    double? unitPrice,
+    String? description,
+    String? localImagePath,
+    bool addToCart = false,
+  }) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return;
+    Product? product =
+        productId != null ? await getProduct(productId) : null;
+    product ??= await findProductByName(trimmed);
+    final imageChanged =
+        localImagePath != null && localImagePath != product?.localImagePath;
+    if (product == null) {
+      product = await upsertProduct(
+        name: trimmed,
+        description: description,
+        categoryId: categoryId,
+        unitId: unitId,
+        basePrice: unitPrice,
+        localImagePath: localImagePath,
+        imagePending: localImagePath != null,
+      );
+    } else {
+      product = await upsertProduct(
+        id: product.id,
+        name: trimmed,
+        description: description,
+        categoryId: categoryId,
+        unitId: unitId ?? product.unitId,
+        basePrice: unitPrice ?? product.basePrice,
+        localImagePath: localImagePath,
+        imagePending: imageChanged || product.imagePending,
+      );
+    }
+    final now = _now;
+    final status = addToCart ? 'in_cart' : 'pending';
+    final planned = qty == 0 ? 1.0 : qty;
+    final bought = status == 'in_cart' ? planned : item.qtyBought;
+    final uid = unitId ?? product.unitId;
+    final price = unitPrice ?? product.basePrice;
+    await (db.update(db.listItems)..where((t) => t.id.equals(item.id))).write(
+      ListItemsCompanion(
+        name: Value(trimmed),
+        productId: Value(product.id),
+        unitId: Value(uid),
+        unitAbbr: Value(unitAbbr),
+        qtyPlanned: Value(planned),
+        qtyBought: Value(bought),
+        unitPrice: Value(price),
+        status: Value(status),
+        notes: Value(description),
+        clientUpdatedAt: Value(now),
+        updatedAt: Value(now),
+      ),
+    );
+    await outbox.enqueue(
+      entity: 'list_items',
+      entityId: item.id,
+      op: SyncOp.update,
+      clientUpdatedAt: now,
+      payload: {
+        'shopping_list_id': item.shoppingListId,
+        'product_id': product.id,
+        'unit_id': uid,
+        'unit_abbr': unitAbbr,
+        'name': trimmed,
+        'qty_planned': planned,
+        'qty_bought': bought,
+        'unit_price': price,
+        'status': status,
+        'notes': description,
       },
     );
   }
@@ -826,6 +1056,151 @@ class CartRepository {
     return (await (db.select(db.purchaseHistories)
           ..where((t) => t.id.equals(historyId)))
         .getSingle());
+  }
+
+  /// One history row for every in-cart item of the active lists.
+  /// [storeId] limits it to that store. [includeExtras] adds this month's
+  /// manual budget movements. Lists stay active.
+  Future<PurchaseHistory> saveCartHistory({
+    String? storeId,
+    String? storeLocation,
+    bool includeExtras = false,
+  }) async {
+    final lists = await (db.select(db.shoppingLists)
+          ..where((t) => t.deletedAt.isNull() & t.status.equals('active')))
+        .get();
+    final listIds = lists
+        .where((l) => storeId == null || l.storeId == storeId)
+        .map((l) => l.id)
+        .toSet();
+    final cart = listIds.isEmpty
+        ? <ListItem>[]
+        : await (db.select(db.listItems)
+              ..where((t) =>
+                  t.deletedAt.isNull() &
+                  t.status.equals('in_cart') &
+                  t.shoppingListId.isIn(listIds)))
+            .get();
+
+    final extras = <BudgetMovement>[];
+    if (includeExtras) {
+      final now = DateTime.now();
+      final start = DateTime(now.year, now.month);
+      final end = DateTime(now.year, now.month + 1);
+      final moves = await db.select(db.budgetMovements).get();
+      extras.addAll(moves.where((m) {
+        final d = m.occurredAt.toLocal();
+        return !d.isBefore(start) && d.isBefore(end);
+      }));
+    }
+    if (cart.isEmpty && extras.isEmpty) {
+      throw StateError('Carrito vacío');
+    }
+
+    final now = _now;
+    final historyId = _uuid.v4();
+    var total = 0.0;
+    for (final i in cart) {
+      final qty = i.qtyBought ?? i.qtyPlanned;
+      total += lineTotal(
+          qty: qty, unitAbbr: i.unitAbbr, unitPrice: i.unitPrice ?? 0);
+    }
+    for (final m in extras) {
+      total += m.amountUsd;
+    }
+
+    await db.transaction(() async {
+      await db.into(db.purchaseHistories).insert(
+            PurchaseHistoriesCompanion.insert(
+              id: historyId,
+              storeLocation: Value(storeLocation),
+              purchasedAt: now,
+              total: Value(total),
+              clientUpdatedAt: now,
+              updatedAt: now,
+              createdAt: now,
+            ),
+          );
+      await outbox.enqueue(
+        entity: 'purchase_histories',
+        entityId: historyId,
+        op: SyncOp.update,
+        clientUpdatedAt: now,
+        payload: {
+          'store_location': storeLocation,
+          'purchased_at': now.toIso8601String(),
+          'total': total,
+        },
+      );
+      for (final i in cart) {
+        await _historyLine(
+          historyId: historyId,
+          now: now,
+          name: i.name,
+          productId: i.productId,
+          unitAbbr: i.unitAbbr,
+          qty: i.qtyBought ?? i.qtyPlanned,
+          unitPrice: i.unitPrice,
+        );
+      }
+      for (final m in extras) {
+        await _historyLine(
+          historyId: historyId,
+          now: now,
+          name: m.label,
+          qty: 1,
+          unitPrice: m.amountUsd,
+        );
+      }
+    });
+
+    return (await (db.select(db.purchaseHistories)
+          ..where((t) => t.id.equals(historyId)))
+        .getSingle());
+  }
+
+  Future<void> _historyLine({
+    required String historyId,
+    required DateTime now,
+    required String name,
+    String? productId,
+    String? unitAbbr,
+    required double qty,
+    double? unitPrice,
+  }) async {
+    final lineId = _uuid.v4();
+    final itemTotal = lineTotal(
+        qty: qty, unitAbbr: unitAbbr, unitPrice: unitPrice ?? 0);
+    await db.into(db.purchaseHistoryItems).insert(
+          PurchaseHistoryItemsCompanion.insert(
+            id: lineId,
+            purchaseHistoryId: historyId,
+            productId: Value(productId),
+            name: name,
+            unitAbbr: Value(unitAbbr),
+            quantity: Value(qty),
+            unitPrice: Value(unitPrice),
+            lineTotal: Value(itemTotal),
+            clientUpdatedAt: now,
+            updatedAt: now,
+            createdAt: now,
+          ),
+        );
+    await outbox.enqueue(
+      entity: 'purchase_history_items',
+      entityId: lineId,
+      op: SyncOp.update,
+      clientUpdatedAt: now,
+      payload: {
+        'purchase_history_id': historyId,
+        'product_id': productId,
+        'name': name,
+        'unit_abbr': unitAbbr,
+        'quantity': qty,
+        'unit_price': unitPrice,
+        'line_total': itemTotal,
+      },
+    );
   }
 
   Future<ShoppingList> reuseHistory(String historyId, {String? listName}) async {

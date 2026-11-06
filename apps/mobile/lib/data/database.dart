@@ -16,6 +16,7 @@ part 'database.g.dart';
   PurchaseHistoryItems,
   SyncOutbox,
   SyncMeta,
+  BudgetMovements,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_open());
@@ -23,7 +24,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   /// Idempotent repair on every open: creates `stores` and the list columns
   /// added in v4/v5 if a previous upgrade did not apply them.
@@ -48,6 +49,14 @@ class AppDatabase extends _$AppDatabase {
     if (!storeNames.contains('location')) {
       await m.addColumn(stores, stores.location);
     }
+    await _ensureBudgetMovements();
+  }
+
+  Future<void> _ensureBudgetMovements() async {
+    final tables = await customSelect(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='budget_movements'",
+    ).get();
+    if (tables.isEmpty) await createMigrator().createTable(budgetMovements);
   }
 
   @override
@@ -76,6 +85,9 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 7) {
             await m.addColumn(listItems, listItems.notes);
+          }
+          if (from < 8) {
+            await m.createTable(budgetMovements);
           }
           if (from < 3) {
             // Rename legacy outbox → sync_queue (idempotent).
@@ -120,6 +132,7 @@ class AppDatabase extends _$AppDatabase {
       await delete(products).go();
       await delete(units).go();
       await delete(categories).go();
+      await delete(budgetMovements).go();
     });
   }
 }

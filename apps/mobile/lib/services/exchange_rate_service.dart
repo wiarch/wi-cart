@@ -15,6 +15,7 @@ class ExchangeRateService extends ChangeNotifier {
   static const _kFetched = 'bcv_fetched_at';
   static const _kEffective = 'bcv_effective_date';
   static const _kShowEur = 'bcv_show_eur';
+  static const _kShowListTotal = 'show_list_grand_total';
 
   final Dio _dio;
 
@@ -26,6 +27,9 @@ class ExchangeRateService extends ChangeNotifier {
   DateTime? fetchedAt;
   String? effectiveDate;
   bool showEur = false;
+
+  /// When false, list and store summaries show only the cart total.
+  bool showListGrandTotal = false;
   bool loading = false;
   String? error;
 
@@ -37,6 +41,7 @@ class ExchangeRateService extends ChangeNotifier {
     _applyUsd();
     eurToBs = prefs.getDouble(_kEur);
     showEur = prefs.getBool(_kShowEur) ?? false;
+    showListGrandTotal = prefs.getBool(_kShowListTotal) ?? false;
     effectiveDate = prefs.getString(_kEffective);
     final raw = prefs.getString(_kFetched);
     if (raw != null) fetchedAt = DateTime.tryParse(raw);
@@ -55,6 +60,13 @@ class ExchangeRateService extends ChangeNotifier {
       await prefs.setDouble(_kUsdManual, usdManual!);
     }
     _applyUsd();
+    notifyListeners();
+  }
+
+  Future<void> setShowListGrandTotal(bool value) async {
+    showListGrandTotal = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kShowListTotal, value);
     notifyListeners();
   }
 

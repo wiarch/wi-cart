@@ -8,11 +8,13 @@ import '../widgets/app_menu.dart';
 import '../theme/app_theme.dart';
 import '../widgets/add_fab.dart';
 import '../widgets/category_style.dart';
+import '../widgets/confirm_dialog.dart';
 import '../widgets/soft_card.dart';
 import '../widgets/sync_badge.dart';
 import '../widgets/money_text.dart';
 import '../widgets/search_field.dart';
 import '../widgets/total_banner.dart';
+import '../lists/share_list_dialog.dart';
 import 'store_dialogs.dart';
 import 'store_lists_page.dart';
 
@@ -175,6 +177,55 @@ class _StoresPageState extends State<StoresPage> {
     );
   }
 
+  Future<void> _storeMenu(BuildContext context, Store store, String v) async {
+    final scope = AppScope.of(context);
+    switch (v) {
+      case 'share':
+        await shareStoreDialog(context, store.id);
+      case 'edit':
+        final name = await storeNameDialog(context, initial: store.name);
+        if (name == null || name == store.name || !context.mounted) return;
+        await scope.repo.renameStore(store.id, name);
+        await scope.sync.syncNow();
+      case 'history':
+        try {
+          await scope.repo.saveCartHistory(
+            storeId: store.id,
+            storeLocation: store.name,
+          );
+          await scope.sync.syncNow();
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Carrito guardado en el historial')),
+          );
+        } on StateError {
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('El carrito de esta tienda está vacío')),
+          );
+        }
+      case 'clone':
+        await scope.repo.cloneStore(store.id);
+        await scope.sync.syncNow();
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Tienda clonada')),
+        );
+      case 'delete':
+        final repo = scope.repo;
+        final sync = scope.sync;
+        final ok = await confirmDialog(
+          context,
+          title: 'Eliminar tienda',
+          message:
+              'Se eliminan la tienda y sus listas. Los productos se quedan en el inventario.',
+        );
+        if (ok != true || !context.mounted) return;
+        await repo.deleteStore(store.id);
+        await sync.syncNow();
+    }
+  }
+
   Widget _storeCard(
     BuildContext context, {
     required Store? store,
@@ -187,6 +238,7 @@ class _StoresPageState extends State<StoresPage> {
     );
     final ownItems = [for (final l in lists) ...?itemsByList[l.id]];
     final totals = listTotals(ownItems);
+    final showTotal = AppScope.of(context).rates.showListGrandTotal;
     final name = store?.name ?? 'Sin tienda';
 
     return SoftCard(
@@ -225,20 +277,76 @@ class _StoresPageState extends State<StoresPage> {
                   Text(store.location!, style: muted),
                 Text('${lists.length} listas', style: muted),
                 const SizedBox(height: 6),
-                MoneyText(
-                  totals.$1,
-                  compact: true,
-                  style: theme.textTheme.labelMedium,
+                Text(
+                  'Carrito',
+                  style: theme.textTheme.labelSmall,
                 ),
                 MoneyText(
                   totals.$2,
                   compact: true,
-                  style: theme.textTheme.labelSmall,
+                  style: theme.textTheme.labelMedium,
                 ),
+                if (showTotal) ...[
+                  const SizedBox(height: 4),
+                  Text('Total', style: theme.textTheme.labelSmall),
+                  MoneyText(
+                    totals.$1,
+                    compact: true,
+                    style: theme.textTheme.labelSmall,
+                  ),
+                ],
               ],
             ),
           ),
-          const Icon(Icons.chevron_right),
+          if (store != null)
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              onSelected: (v) => _storeMenu(context, store, v),
+              itemBuilder: (_) => const [
+                PopupMenuItem(
+                  value: 'share',
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.share_outlined),
+                    title: Text('Compartir'),
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'edit',
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.edit_outlined),
+                    title: Text('Editar'),
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'clone',
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.copy_outlined),
+                    title: Text('Clonar'),
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'history',
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.history),
+                    title: Text('Guardar historial'),
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'delete',
+                  child: ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(Icons.delete_outline),
+                    title: Text('Eliminar'),
+                  ),
+                ),
+              ],
+            )
+          else
+            const Icon(Icons.chevron_right),
         ],
       ),
     );

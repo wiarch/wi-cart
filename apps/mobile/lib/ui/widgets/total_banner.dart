@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../app_scope.dart';
 import '../theme/app_theme.dart';
 import 'money_text.dart';
 
@@ -19,6 +20,14 @@ class TotalBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final rates = AppScope.of(context).rates;
+    return ListenableBuilder(
+      listenable: rates,
+      builder: (context, _) => _body(context, rates.showListGrandTotal),
+    );
+  }
+
+  Widget _body(BuildContext context, bool showTotal) {
     final theme = Theme.of(context);
     final muted = theme.colorScheme.onSurfaceVariant;
     return Container(
@@ -52,25 +61,26 @@ class TotalBanner extends StatelessWidget {
               ],
             ),
           ),
-          Expanded(
-            flex: 2,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  title,
-                  style: theme.textTheme.labelMedium?.copyWith(color: muted),
-                ),
-                const SizedBox(height: 4),
-                MoneyText(
-                  total,
-                  textAlign: TextAlign.end,
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w600),
-                ),
-              ],
+          if (showTotal)
+            Expanded(
+              flex: 2,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    title,
+                    style: theme.textTheme.labelMedium?.copyWith(color: muted),
+                  ),
+                  const SizedBox(height: 4),
+                  MoneyText(
+                    total,
+                    textAlign: TextAlign.end,
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
             ),
-          ),
         ],
       ),
     );

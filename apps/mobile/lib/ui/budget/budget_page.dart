@@ -9,9 +9,15 @@ import '../../utils/spend_math.dart';
 import '../../utils/streams.dart';
 import '../theme/app_theme.dart';
 import '../widgets/app_menu.dart';
+import '../widgets/confirm_dialog.dart';
 import '../widgets/money_text.dart';
 
-typedef _Snap = (List<PurchaseHistory>, List<ShoppingList>, List<ListItem>);
+typedef _Snap = (
+  List<PurchaseHistory>,
+  List<ShoppingList>,
+  List<ListItem>,
+  List<BudgetMovement>,
+);
 
 /// Monthly budget vs. spent this month and what is already in the cart
 /// of active lists. Budget is stored locally (SharedPreferences) in USD.
@@ -58,6 +64,23 @@ class _BudgetPageState extends State<BudgetPage> {
       await prefs.setDouble(BudgetPage.prefKey, usd);
     }
     if (mounted) setState(() => _budgetUsd = usd);
+  }
+
+  Future<void> _saveHistory() async {
+    final scope = AppScope.of(context);
+    try {
+      await scope.repo.saveCartHistory(includeExtras: true);
+      await scope.sync.syncNow();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Carrito guardado en el historial')),
+      );
+    } on StateError {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No hay carrito ni movimientos para guardar')),
+      );
+    }
   }
 
   Future<void> _editBudget() async {
@@ -150,12 +173,18 @@ class _BudgetPageState extends State<BudgetPage> {
     final scope = AppScope.of(context);
     final repo = scope.repo;
     final rates = scope.rates;
-    _stream ??= combineLatest3(
+    _stream ??= combineLatest4(
       repo.watchHistory(),
       repo.watchActiveLists(),
       repo.watchAllItems(),
-      (List<PurchaseHistory> h, List<ShoppingList> l, List<ListItem> i) =>
-          (h, l, i),
+      repo.watchBudgetMovements(),
+      (
+        List<PurchaseHistory> h,
+        List<ShoppingList> l,
+        List<ListItem> i,
+        List<BudgetMovement> m,
+      ) =>
+          (h, l, i, m),
     );
     if (!_rateSeeded && rates.usdToBs != null) {
       _rateSeeded = true;
@@ -165,6 +194,11 @@ class _BudgetPageState extends State<BudgetPage> {
       appBar: AppBar(
         title: const Text('Presupuesto'),
         actions: [
+          IconButton(
+            tooltip: 'Guardar historial',
+            icon: const Icon(Icons.history),
+            onPressed: _saveHistory,
+          ),
           IconButton(
             tooltip: 'Editar presupuesto',
             icon: const Icon(Icons.edit_outlined),
@@ -192,23 +226,37 @@ class _BudgetPageState extends State<BudgetPage> {
                     child: Center(child: CircularProgressIndicator()),
                   );
                 }
-                final (history, lists, items) = snap.data!;
+                final (history, lists, items, movements) = snap.data!;
                 final now = DateTime.now();
                 final monthStart = DateTime(now.year, now.month);
                 final monthEnd = DateTime(now.year, now.month + 1);
-                final thisMonth = history.where((h) {
-                  final d = h.purchasedAt.toLocal();
-                  return !d.isBefore(monthStart) && d.isBefore(monthEnd);
-                }).toList();
+                bool inMonth(DateTime d) {
+                  final local = d.toLocal();
+                  return !local.isBefore(monthStart) && local.isBefore(monthEnd);
+                }
+
+                final thisMonth =
+                    history.where((h) => inMonth(h.purchasedAt)).toList();
+                final monthMoves =
+                    movements.where((m) => inMonth(m.occurredAt)).toList();
                 final spent =
                     thisMonth.fold<double>(0, (s, h) => s + h.total);
+                final extras =
+                    monthMoves.fold<double>(0, (s, m) => s + m.amountUsd);
                 final activeIds = lists.map((l) => l.id).toSet();
                 final inCart = items
                     .where((i) =>
                         i.status == 'in_cart' &&
                         activeIds.contains(i.shoppingListId))
                     .fold<double>(0, (s, i) => s + itemCost(i));
-                return _budgetBody(context, spent, inCart, thisMonth);
+                return _budgetBody(
+                  context,
+                  spent,
+                  extras,
+                  inCart,
+                  thisMonth,
+                  monthMoves,
+                );
               },
             ),
           ],
@@ -273,32 +321,124 @@ class _BudgetPageState extends State<BudgetPage> {
     );
   }
 
+  Future<void> _editMovement(BudgetMovement? existing) async {
+    final rates = AppScope.of(context).rates;
+    final rate = rates.usdToBs;
+    final ctrl = TextEditingController(
+      text: existing?.amountUsd.toStringAsFixed(2) ?? '',
+    );
+    final labelCtrl = TextEditingController(text: existing?.label ?? '');
+    var inBs = false;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setD) => AlertDialog(
+          title: Text(existing == null ? 'Nuevo movimiento' : 'Editar movimiento'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: labelCtrl,
+                decoration: const InputDecoration(labelText: 'Concepto'),
+              ),
+              const SizedBox(height: 12),
+              SegmentedButton<bool>(
+                showSelectedIcon: false,
+                segments: const [
+                  ButtonSegment(value: false, label: Text('USD')),
+                  ButtonSegment(value: true, label: Text('Bs')),
+                ],
+                selected: {inBs},
+                onSelectionChanged: rate == null
+                    ? null
+                    : (s) {
+                        final v = double.tryParse(ctrl.text.replaceAll(',', '.'));
+                        if (v != null) {
+                          ctrl.text =
+                              (inBs ? v / rate : v * rate).toStringAsFixed(2);
+                        }
+                        setD(() => inBs = s.first);
+                      },
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: ctrl,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: InputDecoration(
+                  labelText: inBs ? 'Monto (Bs)' : 'Monto (USD)',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancelar')),
+            FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Guardar')),
+          ],
+        ),
+      ),
+    );
+    if (ok != true || !mounted) return;
+    final label = labelCtrl.text.trim();
+    final v = double.tryParse(ctrl.text.replaceAll(',', '.'));
+    if (label.isEmpty || v == null || v <= 0) return;
+    final usd = inBs ? (rate == null ? null : v / rate) : v;
+    if (usd == null) return;
+    final repo = AppScope.of(context).repo;
+    if (existing == null) {
+      await repo.addBudgetMovement(label: label, amountUsd: usd);
+    } else {
+      await repo.updateBudgetMovement(existing.id, label: label, amountUsd: usd);
+    }
+  }
+
+  Future<void> _deleteMovement(BudgetMovement m) async {
+    final ok = await confirmDialog(
+      context,
+      title: 'Eliminar movimiento',
+      message: '¿Eliminar "${m.label}"?',
+    );
+    if (ok != true || !mounted) return;
+    await AppScope.of(context).repo.deleteBudgetMovement(m.id);
+  }
+
   Widget _budgetBody(
     BuildContext context,
     double spent,
+    double extras,
     double inCart,
     List<PurchaseHistory> thisMonth,
+    List<BudgetMovement> monthMoves,
   ) {
     final theme = Theme.of(context);
     final budget = _budgetUsd;
+    final committed = spent + extras;
     if (budget == null) {
-      return Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Define un presupuesto mensual',
-                style: theme.textTheme.titleMedium),
-            const SizedBox(height: 12),
-            FilledButton(
-                onPressed: _editBudget, child: const Text('Definir monto')),
-          ],
-        ),
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Define un presupuesto mensual',
+                    style: theme.textTheme.titleMedium),
+                const SizedBox(height: 12),
+                FilledButton(
+                    onPressed: _editBudget, child: const Text('Definir monto')),
+              ],
+            ),
+          ),
+          _movementsSection(context, monthMoves),
+        ],
       );
     }
-    final over = spent > budget;
-    final ratio = (spent / budget).clamp(0.0, 1.0).toDouble();
-    final available = budget - spent - inCart;
+    final available = budget - committed - inCart;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -309,33 +449,27 @@ class _BudgetPageState extends State<BudgetPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Presupuesto mensual', style: theme.textTheme.labelMedium),
+              Text('Presupuesto de compra', style: theme.textTheme.labelMedium),
               const SizedBox(height: 4),
               MoneyText(budget,
                   style: theme.textTheme.headlineSmall
                       ?.copyWith(fontWeight: FontWeight.w800)),
               const SizedBox(height: 16),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(999),
-                child: LinearProgressIndicator(
-                  value: ratio,
-                  minHeight: 10,
-                  backgroundColor: AppTheme.ink700,
-                  color: over ? theme.colorScheme.error : AppTheme.sage,
-                ),
-              ),
-              const SizedBox(height: 16),
-              _row(context, 'Gastado este mes', spent),
-              _row(context, 'Restante', budget - spent,
-                  danger: budget - spent < 0),
+              Text('Gastos', style: theme.textTheme.titleSmall),
+              const Divider(height: 16),
+              _row(context, 'Movimientos extra', extras),
               _row(context, 'En carrito (listas activas)', inCart),
-              const Divider(height: 24),
-              _row(context, 'Disponible tras carrito', available,
+              const Divider(height: 16),
+              _row(context, 'Total de gasto', extras + inCart, bold: true),
+              const Divider(height: 16),
+              _row(context, 'Disponible', available,
                   danger: available < 0, bold: true),
             ],
           ),
         ),
         const SizedBox(height: 20),
+        _movementsSection(context, monthMoves),
+        const SizedBox(height: 8),
         Text('Compras de este mes', style: theme.textTheme.titleSmall),
         const SizedBox(height: 8),
         if (thisMonth.isEmpty)
@@ -349,6 +483,57 @@ class _BudgetPageState extends State<BudgetPage> {
                   compact: true,
                   style: theme.textTheme.bodyMedium
                       ?.copyWith(fontWeight: FontWeight.w600)),
+            ),
+      ],
+    );
+  }
+
+  Widget _movementsSection(
+    BuildContext context,
+    List<BudgetMovement> monthMoves,
+  ) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text('Movimientos adicionales',
+                  style: theme.textTheme.titleSmall),
+            ),
+            TextButton.icon(
+              onPressed: () => _editMovement(null),
+              icon: const Icon(Icons.add),
+              label: const Text('Agregar'),
+            ),
+          ],
+        ),
+        if (monthMoves.isEmpty)
+          Text('Sin gastos extra este mes', style: theme.textTheme.bodySmall)
+        else
+          for (final m in monthMoves)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              onTap: () => _editMovement(m),
+              title: Text(m.label),
+              subtitle: Text(
+                '${_dateFmt.format(m.occurredAt.toLocal())} · toca para editar',
+              ),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  MoneyText(m.amountUsd,
+                      compact: true,
+                      style: theme.textTheme.bodyMedium
+                          ?.copyWith(fontWeight: FontWeight.w600)),
+                  IconButton(
+                    tooltip: 'Eliminar',
+                    icon: const Icon(Icons.delete_outline),
+                    onPressed: () => _deleteMovement(m),
+                  ),
+                ],
+              ),
             ),
       ],
     );

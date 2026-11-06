@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -28,9 +29,16 @@ class _ImageCropPageState extends State<ImageCropPage> {
 
   late final Future<ui.Image> _future = _load();
   ui.Image? _image;
+  ui.Image? _rotated;
   Rect? _crop; // image pixel space, always square
   Size _canvas = Size.zero;
   bool _saving = false;
+
+  @override
+  void dispose() {
+    _rotated?.dispose();
+    super.dispose();
+  }
 
   Future<ui.Image> _load() async {
     final stream =
@@ -111,6 +119,33 @@ class _ImageCropPageState extends State<ImageCropPage> {
     final x = sx > 0 ? ax : ax - side;
     final y = sy > 0 ? ay : ay - side;
     setState(() => _crop = Rect.fromLTWH(x, y, side, side));
+  }
+
+  Future<void> _rotate(bool clockwise) async {
+    final src = _image;
+    if (src == null || _saving) return;
+    final nw = src.height;
+    final nh = src.width;
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    if (clockwise) {
+      canvas.translate(nw.toDouble(), 0);
+      canvas.rotate(math.pi / 2);
+    } else {
+      canvas.translate(0, nh.toDouble());
+      canvas.rotate(-math.pi / 2);
+    }
+    canvas.drawImage(src, Offset.zero, Paint());
+    final next = await recorder.endRecording().toImage(nw, nh);
+    final prev = _rotated;
+    _rotated = next;
+    prev?.dispose();
+    final side = (nw < nh ? nw : nh).toDouble();
+    if (!mounted) return;
+    setState(() {
+      _image = next;
+      _crop = Rect.fromLTWH((nw - side) / 2, (nh - side) / 2, side, side);
+    });
   }
 
   Future<void> _confirm() async {
@@ -206,7 +241,7 @@ class _ImageCropPageState extends State<ImageCropPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Recortar imagen'),
+        title: const Text('Editar imagen'),
         actions: [
           FutureBuilder<ui.Image>(
             future: _future,
@@ -223,7 +258,7 @@ class _ImageCropPageState extends State<ImageCropPage> {
           if (snap.hasError) {
             return const Center(child: Text('No se pudo cargar la imagen'));
           }
-          final img = snap.data;
+          final img = _image ?? snap.data;
           final crop = _crop;
           if (img == null || crop == null) {
             return const Center(child: CircularProgressIndicator());
@@ -268,6 +303,28 @@ class _ImageCropPageState extends State<ImageCropPage> {
                       );
                     },
                   ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _saving ? null : () => _rotate(false),
+                        icon: const Icon(Icons.rotate_left),
+                        label: const Text('Izquierda'),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _saving ? null : () => _rotate(true),
+                        icon: const Icon(Icons.rotate_right),
+                        label: const Text('Derecha'),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               _preview(img, crop),
@@ -322,27 +379,12 @@ class _CropPreviewPainter extends CustomPainter {
 }
 
 /// Full-screen viewer for a saved product image. Pinch to zoom.
+/// Preview opens the crop/rotate editor. Pops the saved path, or null.
 class ImagePreviewPage extends StatelessWidget {
   const ImagePreviewPage({super.key, required this.path});
 
   final String path;
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: Center(
-        child: InteractiveViewer(
-          minScale: 1,
-          maxScale: 5,
-          child: Image.file(File(path), fit: BoxFit.contain),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => ImageCropPage(sourcePath: path);
 }

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../app_scope.dart';
 import '../history/history_page.dart';
 import '../widgets/money_text.dart';
+import 'backup_page.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key, this.onLogout});
@@ -103,6 +104,16 @@ class SettingsPage extends StatelessWidget {
               const SizedBox(height: 8),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
+                title: const Text('Mostrar total general de la lista'),
+                subtitle: const Text(
+                  'Desactivado: solo el total del carrito en listas y tiendas. '
+                  'Activado: también el total general.',
+                ),
+                value: rates.showListGrandTotal,
+                onChanged: (v) => rates.setShowListGrandTotal(v),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
                 title: const Text('Incluir tasa Euro (BCV)'),
                 subtitle: const Text(
                   'Además del dólar, muestra el equivalente en euros '
@@ -110,6 +121,21 @@ class SettingsPage extends StatelessWidget {
                 ),
                 value: rates.showEur,
                 onChanged: (v) => rates.setShowEur(v),
+              ),
+              const Divider(height: 24),
+              Text('Respaldo', style: Theme.of(context).textTheme.titleMedium),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.backup_outlined),
+                title: const Text('Respaldo'),
+                subtitle: const Text(
+                  'Tienda, listas, productos o categorías',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const BackupPage()),
+                ),
               ),
               const Divider(height: 24),
               ListTile(

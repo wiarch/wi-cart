@@ -119,6 +119,40 @@ Future<Store?> pickStoreSheet(BuildContext context, List<Store> stores) {
   );
 }
 
+/// Rename dialog. Returns the trimmed name, or null when cancelled.
+Future<String?> listNameDialog(BuildContext context, String initial) {
+  final name = TextEditingController(text: initial);
+  return showDialog<String>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('Editar lista'),
+      content: TextField(
+        controller: name,
+        autofocus: true,
+        textCapitalization: TextCapitalization.sentences,
+        decoration: const InputDecoration(labelText: 'Nombre'),
+        onSubmitted: (v) {
+          final t = v.trim();
+          if (t.isNotEmpty) Navigator.pop(ctx, t);
+        },
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: () {
+            final t = name.text.trim();
+            if (t.isNotEmpty) Navigator.pop(ctx, t);
+          },
+          child: const Text('Guardar'),
+        ),
+      ],
+    ),
+  );
+}
+
 /// Create a list inside [store] and open it.
 Future<void> createListDialog(BuildContext context, Store store) async {
   final scope = AppScope.of(context);
