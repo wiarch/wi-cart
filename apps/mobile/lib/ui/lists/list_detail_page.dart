@@ -569,7 +569,7 @@ class _ListDetailPageState extends State<ListDetailPage> {
                             setState(() => _cartExpanded = !_cartExpanded),
                         onDeleteAll: cart.isEmpty
                             ? null
-                            : () => _deleteCompleted(context, cart),
+                            : () => _clearCart(context),
                         child: !_cartExpanded
                             ? const SizedBox.shrink()
                             : visibleCart.isEmpty
@@ -756,14 +756,16 @@ class _ListDetailPageState extends State<ListDetailPage> {
 
     return Dismissible(
       key: ValueKey('swipe-${item.id}'),
-      direction: inCart || selecting
-          ? DismissDirection.none
-          : DismissDirection.startToEnd,
+      direction: selecting ? DismissDirection.none : DismissDirection.startToEnd,
       dismissThresholds: const {DismissDirection.startToEnd: 0.32},
       movementDuration: const Duration(milliseconds: 220),
       resizeDuration: Duration.zero,
       confirmDismiss: (_) async {
-        await _swipeToCart(item);
+        if (inCart) {
+          await _swipeToList(item);
+        } else {
+          await _swipeToCart(item);
+        }
         return false;
       },
       background: Container(
@@ -771,10 +773,14 @@ class _ListDetailPageState extends State<ListDetailPage> {
         padding: const EdgeInsets.only(left: 22),
         alignment: Alignment.centerLeft,
         decoration: BoxDecoration(
-          color: AppTheme.sage,
+          color: inCart ? AppTheme.ink700 : AppTheme.sage,
           borderRadius: BorderRadius.circular(AppTheme.radius),
         ),
-        child: const Icon(Icons.shopping_cart, color: AppTheme.ink800, size: 28),
+        child: Icon(
+          inCart ? Icons.undo : Icons.shopping_cart,
+          color: inCart ? AppTheme.mint : AppTheme.ink800,
+          size: 28,
+        ),
       ),
       child: card,
     );
@@ -784,6 +790,13 @@ class _ListDetailPageState extends State<ListDetailPage> {
     setState(() {
       if (!_selected.add(id)) _selected.remove(id);
     });
+  }
+
+  Future<void> _swipeToList(ListItem item) async {
+    if (item.status != 'in_cart' || _flyingIds.contains(item.id)) return;
+    final scope = AppScope.of(context);
+    await scope.repo.setItemStatus(item, 'pending');
+    unawaited(scope.sync.syncNow());
   }
 
   Future<void> _swipeToCart(ListItem item) async {
@@ -1041,27 +1054,13 @@ class _ListDetailPageState extends State<ListDetailPage> {
     final ok = await confirmDialog(
       context,
       title: 'Limpiar carrito',
-      message: 'Mueve todos los ítems del carrito a Pendiente.',
+      message:
+          '¿Vaciar el carrito y devolver los productos a la lista?',
       confirm: 'Limpiar',
     );
     if (ok != true || !context.mounted) return;
     final scope = AppScope.of(context);
     await scope.repo.clearCart(widget.listId);
-    await scope.sync.syncNow();
-  }
-
-  Future<void> _deleteCompleted(
-      BuildContext context, List<ListItem> cart) async {
-    final ok = await confirmDialog(
-      context,
-      title: 'Eliminar comprados',
-      message: 'Elimina ${cart.length} ítems del carrito.',
-    );
-    if (ok != true || !context.mounted) return;
-    final scope = AppScope.of(context);
-    for (final item in cart) {
-      await scope.repo.deleteItem(item.id);
-    }
     await scope.sync.syncNow();
   }
 
@@ -1351,10 +1350,9 @@ class _CartSection extends StatelessWidget {
               if (onDeleteAll != null)
                 IconButton(
                   visualDensity: VisualDensity.compact,
-                  tooltip: 'Eliminar comprados',
-                  icon: Icon(Icons.delete_sweep_outlined,
-                      size: 20,
-                      color: Theme.of(context).colorScheme.error),
+                  tooltip: 'Limpiar carrito',
+                  icon: const Icon(Icons.remove_shopping_cart_outlined,
+                      size: 20, color: AppTheme.ink700),
                   onPressed: onDeleteAll,
                 ),
               TextButton(

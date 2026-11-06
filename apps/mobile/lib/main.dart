@@ -66,11 +66,8 @@ class _BootAppState extends State<_BootApp> {
       final rates = ExchangeRateService();
       await rates.init();
 
-      // Warm DB once so wasm/worker errors surface here (with UI).
+      // Open the local database, then paint. Cloud sync stays in the background.
       await db.customSelect('select 1').get();
-
-      unawaited(sync.start());
-      unawaited(rates.refresh());
 
       if (!mounted) return;
       setState(() {
@@ -83,6 +80,8 @@ class _BootAppState extends State<_BootApp> {
           rates: rates,
         );
       });
+      unawaited(sync.start());
+      unawaited(rates.refresh());
     } catch (e, st) {
       debugPrint('wi-cart boot failed: $e\n$st');
       if (!mounted) return;
@@ -180,10 +179,10 @@ class _WiCartAppState extends State<WiCartApp> {
 
   Future<void> _check() async {
     final token = await widget.api.getToken();
-    if (token != null) {
-      await widget.repo.ensureDefaults();
-    }
-    if (mounted) setState(() => _authed = token != null);
+    final prefs = await SharedPreferences.getInstance();
+    final guest = prefs.getBool('guest_mode') ?? false;
+    if (mounted) setState(() => _authed = token != null || guest);
+    if (token != null || guest) unawaited(widget.repo.ensureDefaults());
   }
 
   @override

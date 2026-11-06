@@ -15,15 +15,25 @@ import '../widgets/money_text.dart';
 import '../widgets/search_field.dart';
 import 'store_dialogs.dart';
 
-/// Same purchase budget shown in the budget module.
-class _PurchaseBudgetCard extends StatefulWidget {
-  const _PurchaseBudgetCard();
+/// Cart on the left. Purchase budget on the right when [showBudget] is on.
+class _StoreSummary extends StatefulWidget {
+  const _StoreSummary({
+    required this.total,
+    required this.cart,
+    required this.showTotal,
+    required this.showBudget,
+  });
+
+  final double total;
+  final double cart;
+  final bool showTotal;
+  final bool showBudget;
 
   @override
-  State<_PurchaseBudgetCard> createState() => _PurchaseBudgetCardState();
+  State<_StoreSummary> createState() => _StoreSummaryState();
 }
 
-class _PurchaseBudgetCardState extends State<_PurchaseBudgetCard> {
+class _StoreSummaryState extends State<_StoreSummary> {
   double? _usd;
   var _loaded = false;
 
@@ -42,80 +52,86 @@ class _PurchaseBudgetCardState extends State<_PurchaseBudgetCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurfaceVariant;
+    final cartStyle = widget.showBudget
+        ? theme.textTheme.headlineSmall
+        : theme.textTheme.displaySmall;
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
       padding: const EdgeInsets.all(18),
       decoration: AppTheme.cardDecoration(),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Presupuesto de compra', style: theme.textTheme.labelMedium),
-          const SizedBox(height: 4),
-          if (!_loaded)
-            const SizedBox(
-              height: 28,
-              width: 28,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          else if (_usd == null)
-            Text(
-              'Sin presupuesto',
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'En carrito',
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: AppTheme.sage,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    MoneyText(
+                      widget.cart,
+                      style: cartStyle?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        color: AppTheme.ink700,
+                        letterSpacing: -0.6,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            )
-          else
-            MoneyText(
-              _usd!,
-              style: theme.textTheme.headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.w800),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Cart is the primary figure; list total is secondary.
-class _CartHighlight extends StatelessWidget {
-  const _CartHighlight({
-    required this.total,
-    required this.cart,
-    required this.showTotal,
-  });
-
-  final double total;
-  final double cart;
-  final bool showTotal;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final muted = theme.colorScheme.onSurfaceVariant;
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-      padding: const EdgeInsets.all(20),
-      decoration: AppTheme.cardDecoration(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'En carrito',
-            style: theme.textTheme.labelLarge?.copyWith(
-              color: AppTheme.sage,
-              fontWeight: FontWeight.w700,
-            ),
+              if (widget.showBudget)
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        'Presupuesto de compra',
+                        textAlign: TextAlign.end,
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: AppTheme.sage,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      if (!_loaded)
+                        const SizedBox(
+                          height: 28,
+                          width: 28,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      else if (_usd == null)
+                        Text(
+                          '—',
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: muted,
+                          ),
+                        )
+                      else
+                        MoneyText(
+                          _usd!,
+                          textAlign: TextAlign.end,
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.ink700,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+            ],
           ),
-          const SizedBox(height: 4),
-          MoneyText(
-            cart,
-            style: theme.textTheme.displaySmall?.copyWith(
-              fontWeight: FontWeight.w900,
-              color: AppTheme.ink700,
-              letterSpacing: -1,
-            ),
-          ),
-          if (showTotal) ...[
+          if (widget.showTotal) ...[
             const Divider(height: 24),
             Text(
               'Total de la lista',
@@ -123,7 +139,7 @@ class _CartHighlight extends StatelessWidget {
             ),
             const SizedBox(height: 2),
             MoneyText(
-              total,
+              widget.total,
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
@@ -289,7 +305,6 @@ class _StoreListsPageState extends State<StoreListsPage> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(0, 8, 0, 88),
       children: [
-        const _PurchaseBudgetCard(),
         if (store != null && (store.location?.isNotEmpty ?? false))
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
@@ -310,10 +325,11 @@ class _StoreListsPageState extends State<StoreListsPage> {
               ],
             ),
           ),
-        _CartHighlight(
+        _StoreSummary(
           total: totals.$1,
           cart: totals.$2,
           showTotal: AppScope.of(context).rates.showListGrandTotal,
+          showBudget: AppScope.of(context).rates.showStoreBudget,
         ),
         if (lists.isEmpty)
           Padding(

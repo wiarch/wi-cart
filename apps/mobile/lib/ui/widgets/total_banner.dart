@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../app_scope.dart';
+import '../budget/budget_page.dart';
 import '../theme/app_theme.dart';
 import 'money_text.dart';
 
-/// Summary card. Cart (left, primary) and total (right, secondary).
-class TotalBanner extends StatelessWidget {
+/// Summary card. Cart on the left, purchase budget on the right.
+class TotalBanner extends StatefulWidget {
   const TotalBanner({
     super.key,
     required this.title,
@@ -13,10 +15,30 @@ class TotalBanner extends StatelessWidget {
     required this.cart,
   });
 
-  /// Label for the total block (right).
+  /// Label for the optional list-total block.
   final String title;
   final double total;
   final double cart;
+
+  @override
+  State<TotalBanner> createState() => _TotalBannerState();
+}
+
+class _TotalBannerState extends State<TotalBanner> {
+  double? _budget;
+  var _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    SharedPreferences.getInstance().then((prefs) {
+      if (!mounted) return;
+      setState(() {
+        _budget = prefs.getDouble(BudgetPage.prefKey);
+        _loaded = true;
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +73,7 @@ class TotalBanner extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 MoneyText(
-                  cart,
+                  widget.cart,
                   style: theme.textTheme.displaySmall?.copyWith(
                     fontWeight: FontWeight.w900,
                     color: AppTheme.ink700,
@@ -61,26 +83,54 @@ class TotalBanner extends StatelessWidget {
               ],
             ),
           ),
-          if (showTotal)
-            Expanded(
-              flex: 2,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
+          Expanded(
+            flex: 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  'Presupuesto',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: AppTheme.sage,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                if (!_loaded)
+                  const SizedBox(height: 28)
+                else if (_budget == null)
                   Text(
-                    title,
+                    '—',
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: muted,
+                    ),
+                  )
+                else
+                  MoneyText(
+                    _budget!,
+                    textAlign: TextAlign.end,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.ink700,
+                    ),
+                  ),
+                if (showTotal) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.title,
                     style: theme.textTheme.labelMedium?.copyWith(color: muted),
                   ),
-                  const SizedBox(height: 4),
                   MoneyText(
-                    total,
+                    widget.total,
                     textAlign: TextAlign.end,
-                    style: theme.textTheme.titleMedium
+                    style: theme.textTheme.labelLarge
                         ?.copyWith(fontWeight: FontWeight.w600),
                   ),
                 ],
-              ),
+              ],
             ),
+          ),
         ],
       ),
     );

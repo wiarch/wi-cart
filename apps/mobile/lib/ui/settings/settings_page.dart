@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../app_scope.dart';
-import '../history/history_page.dart';
+import '../lists/import_list_sheet.dart';
 import '../widgets/money_text.dart';
 import 'backup_page.dart';
 
@@ -15,7 +16,7 @@ class SettingsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final rates = AppScope.of(context).rates;
     return Scaffold(
-      appBar: AppBar(title: const Text('Ajustes')),
+      appBar: AppBar(title: const Text('Configuración')),
       body: ListenableBuilder(
         listenable: rates,
         builder: (context, _) {
@@ -114,6 +115,15 @@ class SettingsPage extends StatelessWidget {
               ),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
+                title: const Text('Mostrar presupuesto junto al carrito'),
+                subtitle: const Text(
+                  'En la tienda, el presupuesto de compra aparece al lado del carrito.',
+                ),
+                value: rates.showStoreBudget,
+                onChanged: (v) => rates.setShowStoreBudget(v),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
                 title: const Text('Incluir tasa Euro (BCV)'),
                 subtitle: const Text(
                   'Además del dólar, muestra el equivalente en euros '
@@ -123,31 +133,19 @@ class SettingsPage extends StatelessWidget {
                 onChanged: (v) => rates.setShowEur(v),
               ),
               const Divider(height: 24),
-              Text('Respaldo', style: Theme.of(context).textTheme.titleMedium),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.backup_outlined),
-                title: const Text('Respaldo'),
-                subtitle: const Text(
-                  'Tienda, listas, productos o categorías',
-                ),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const BackupPage()),
+                leading: const Icon(Icons.content_paste_outlined),
+                title: const Text('Importar lista'),
+                onTap: () => showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  useSafeArea: true,
+                  builder: (_) => const ImportListSheet(),
                 ),
               ),
               const Divider(height: 24),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.history),
-                title: const Text('Historial de compras'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const HistoryPage()),
-                ),
-              ),
+              const BackupSection(),
               if (onLogout != null) ...[
                 const Divider(height: 24),
                 ListTile(
@@ -160,8 +158,14 @@ class SettingsPage extends StatelessWidget {
                   onTap: () async {
                     final scope = AppScope.of(context);
                     final nav = Navigator.of(context);
-                    await scope.api.logout();
-                    await scope.repo.onUserSwitch(null);
+                    final token = await scope.api.getToken();
+                    if (token != null) {
+                      await scope.api.logout();
+                      await scope.repo.onUserSwitch(null);
+                    } else {
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.setBool('guest_mode', false);
+                    }
                     nav.popUntil((r) => r.isFirst);
                     onLogout!();
                   },

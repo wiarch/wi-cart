@@ -46,7 +46,8 @@ class SyncEngine {
     _connSub = Connectivity()
         .onConnectivityChanged
         .listen((_) => unawaited(syncNow()));
-    await syncNow();
+    // Local DB is already readable. Merge with the cloud without blocking startup.
+    unawaited(syncNow());
   }
 
   void dispose() {

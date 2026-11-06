@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../app_scope.dart';
-import '../lists/import_list_sheet.dart';
 import '../settings/settings_page.dart';
 import '../theme/app_theme.dart';
 
-/// Profile avatar opens overflow menu (Ajustes, importar, …).
+/// Profile avatar opens Configuración.
 class AppMenuButton extends StatefulWidget {
   const AppMenuButton({super.key, this.onLogout});
 
@@ -39,64 +38,26 @@ class _AppMenuButtonState extends State<AppMenuButton> {
 
   @override
   Widget build(BuildContext context) {
-    return PopupMenuButton<String>(
-      tooltip: 'Cuenta',
-      offset: const Offset(0, 44),
-      color: AppTheme.popover,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: const BorderSide(color: AppTheme.borderSubtle),
+    return IconButton(
+      tooltip: 'Configuración',
+      onPressed: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => SettingsPage(onLogout: widget.onLogout),
+        ),
       ),
-      onSelected: (v) {
-        if (v == 'import') {
-          showModalBottomSheet(
-            context: context,
-            isScrollControlled: true,
-            useSafeArea: true,
-            builder: (_) => const ImportListSheet(),
-          );
-          return;
-        }
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => SettingsPage(onLogout: widget.onLogout),
-          ),
-        );
-      },
-      itemBuilder: (_) => const [
-        PopupMenuItem(
-          value: 'import',
-          child: ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.content_paste_outlined),
-            title: Text('Importar lista'),
-          ),
-        ),
-        PopupMenuItem(
-          value: 'settings',
-          child: ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.settings_outlined),
-            title: Text('Ajustes'),
-          ),
-        ),
-      ],
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        child: CircleAvatar(
-          radius: 16,
-          backgroundColor: AppTheme.sage,
-          foregroundImage: _avatarUrl != null && _avatarUrl!.isNotEmpty
-              ? NetworkImage(_avatarUrl!)
-              : null,
-          child: Text(
-            _initial ?? '?',
-            style: const TextStyle(
-              color: AppTheme.ink800,
-              fontWeight: FontWeight.w700,
-              fontSize: 13,
-            ),
+      icon: CircleAvatar(
+        radius: 16,
+        backgroundColor: AppTheme.sage,
+        foregroundImage: _avatarUrl != null && _avatarUrl!.isNotEmpty
+            ? NetworkImage(_avatarUrl!)
+            : null,
+        child: Text(
+          _initial ?? '?',
+          style: const TextStyle(
+            color: AppTheme.ink800,
+            fontWeight: FontWeight.w700,
+            fontSize: 13,
           ),
         ),
       ),

@@ -49,24 +49,17 @@ Future<String?> _promptCategoryName(BuildContext context) async {
   final ctrl = TextEditingController();
   final result = await showDialog<String>(
     context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text('Nueva categoría'),
-      content: TextField(
+    builder: (ctx) => AppAlertDialog(
+      title: 'Nueva categoría',
+      confirmLabel: 'Crear',
+      onCancel: () => Navigator.pop(ctx),
+      onConfirm: () => Navigator.pop(ctx, ctrl.text.trim()),
+      child: TextField(
         controller: ctrl,
         autofocus: false,
         textCapitalization: TextCapitalization.sentences,
         decoration: const InputDecoration(labelText: 'Nombre'),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx),
-          child: const Text('Cancelar'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-          child: const Text('Crear'),
-        ),
-      ],
     ),
   );
   return (result == null || result.isEmpty) ? null : result;

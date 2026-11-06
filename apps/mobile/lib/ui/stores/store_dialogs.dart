@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app_scope.dart';
 import '../../data/database.dart';
 import '../lists/list_detail_page.dart';
+import '../widgets/confirm_dialog.dart';
 import '../theme/app_theme.dart';
 import '../widgets/category_style.dart';
 import '../widgets/icon_picker.dart';
@@ -124,9 +125,15 @@ Future<String?> listNameDialog(BuildContext context, String initial) {
   final name = TextEditingController(text: initial);
   return showDialog<String>(
     context: context,
-    builder: (ctx) => AlertDialog(
-      title: const Text('Editar lista'),
-      content: TextField(
+    builder: (ctx) => AppAlertDialog(
+      title: 'Editar lista',
+      confirmLabel: 'Guardar',
+      onCancel: () => Navigator.pop(ctx),
+      onConfirm: () {
+        final t = name.text.trim();
+        if (t.isNotEmpty) Navigator.pop(ctx, t);
+      },
+      child: TextField(
         controller: name,
         autofocus: true,
         textCapitalization: TextCapitalization.sentences,
@@ -136,19 +143,6 @@ Future<String?> listNameDialog(BuildContext context, String initial) {
           if (t.isNotEmpty) Navigator.pop(ctx, t);
         },
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx),
-          child: const Text('Cancelar'),
-        ),
-        FilledButton(
-          onPressed: () {
-            final t = name.text.trim();
-            if (t.isNotEmpty) Navigator.pop(ctx, t);
-          },
-          child: const Text('Guardar'),
-        ),
-      ],
     ),
   );
 }
@@ -161,9 +155,12 @@ Future<void> createListDialog(BuildContext context, Store store) async {
   final ok = await showDialog<bool>(
     context: context,
     builder: (ctx) => StatefulBuilder(
-      builder: (ctx, setD) => AlertDialog(
-        title: Text('Nueva lista · ${store.name}'),
-        content: Row(
+      builder: (ctx, setD) => AppAlertDialog(
+        title: 'Nueva lista · ${store.name}',
+        confirmLabel: 'Crear',
+        onCancel: () => Navigator.pop(ctx, false),
+        onConfirm: () => Navigator.pop(ctx, true),
+        child: Row(
           children: [
             IconButton.filledTonal(
               tooltip: 'Icono',
@@ -182,16 +179,6 @@ Future<void> createListDialog(BuildContext context, Store store) async {
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Crear'),
-          ),
-        ],
       ),
     ),
   );

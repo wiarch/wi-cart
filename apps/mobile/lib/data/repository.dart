@@ -1278,6 +1278,24 @@ class CartRepository {
     }
   }
 
+  /// True when the device has shopping data that is not just default units.
+  Future<bool> hasGuestContent() async {
+    Future<bool> any(String table) async {
+      final rows = await db
+          .customSelect('SELECT 1 FROM $table LIMIT 1')
+          .get();
+      return rows.isNotEmpty;
+    }
+
+    if (await any('products')) return true;
+    if (await any('stores')) return true;
+    if (await any('shopping_lists')) return true;
+    if (await any('list_items')) return true;
+    if (await any('purchase_histories')) return true;
+    if (await any('budget_movements')) return true;
+    return false;
+  }
+
   Future<void> onUserSwitch(String? newUserId) async {
     final prefs = await SharedPreferences.getInstance();
     final prev = prefs.getString('local_user_id');

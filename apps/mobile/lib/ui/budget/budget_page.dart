@@ -92,9 +92,12 @@ class _BudgetPageState extends State<BudgetPage> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setD) => AlertDialog(
-          title: const Text('Presupuesto mensual'),
-          content: Column(
+        builder: (ctx, setD) => AppAlertDialog(
+          title: 'Presupuesto mensual',
+          confirmLabel: 'Guardar',
+          onCancel: () => Navigator.pop(ctx, false),
+          onConfirm: () => Navigator.pop(ctx, true),
+          child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               SegmentedButton<bool>(
@@ -127,14 +130,6 @@ class _BudgetPageState extends State<BudgetPage> {
               ),
             ],
           ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Cancelar')),
-            FilledButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Guardar')),
-          ],
         ),
       ),
     );
@@ -332,9 +327,12 @@ class _BudgetPageState extends State<BudgetPage> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setD) => AlertDialog(
-          title: Text(existing == null ? 'Nuevo movimiento' : 'Editar movimiento'),
-          content: Column(
+        builder: (ctx, setD) => AppAlertDialog(
+          title: existing == null ? 'Nuevo movimiento' : 'Editar movimiento',
+          confirmLabel: 'Guardar',
+          onCancel: () => Navigator.pop(ctx, false),
+          onConfirm: () => Navigator.pop(ctx, true),
+          child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
@@ -371,14 +369,6 @@ class _BudgetPageState extends State<BudgetPage> {
               ),
             ],
           ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Cancelar')),
-            FilledButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Guardar')),
-          ],
         ),
       ),
     );

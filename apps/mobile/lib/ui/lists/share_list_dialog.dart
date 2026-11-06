@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 
 import '../../app_scope.dart';
+import '../widgets/confirm_dialog.dart';
 
 Future<void> shareListDialog(BuildContext context, String listId) {
   final api = AppScope.of(context).api;
@@ -35,9 +36,12 @@ Future<void> _shareDialog(
   final ctrl = TextEditingController();
   final username = await showDialog<String>(
     context: context,
-    builder: (ctx) => AlertDialog(
-      title: Text(title),
-      content: TextField(
+    builder: (ctx) => AppAlertDialog(
+      title: title,
+      confirmLabel: 'Compartir',
+      onCancel: () => Navigator.pop(ctx),
+      onConfirm: () => Navigator.pop(ctx, ctrl.text),
+      child: TextField(
         controller: ctrl,
         autofocus: true,
         decoration: InputDecoration(
@@ -48,16 +52,6 @@ Future<void> _shareDialog(
         textInputAction: TextInputAction.done,
         onSubmitted: (v) => Navigator.pop(ctx, v),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(ctx),
-          child: const Text('Cancelar'),
-        ),
-        FilledButton(
-          onPressed: () => Navigator.pop(ctx, ctrl.text),
-          child: const Text('Compartir'),
-        ),
-      ],
     ),
   );
   if (username == null || username.trim().isEmpty || !context.mounted) return;

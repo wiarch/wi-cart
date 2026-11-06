@@ -1,9 +1,11 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../app_scope.dart';
 import '../theme/app_theme.dart';
+import '../widgets/confirm_dialog.dart';
 
 // Web OAuth client ID (public). Android client is bound by package + SHA-1, not used in code.
 const _googleServerClientId = String.fromEnvironment(
@@ -42,6 +44,23 @@ class _LoginPageState extends State<LoginPage> {
       if (idToken == null) throw StateError('Google no devolvió id_token');
       await scope.api.loginWithGoogle(idToken: idToken);
       final userId = await scope.api.getUserId();
+      final prefs = await SharedPreferences.getInstance();
+      final guest = prefs.getBool('guest_mode') ?? false;
+      final linked = prefs.getString('local_user_id');
+      if ((guest || linked == null) && await scope.repo.hasGuestContent()) {
+        if (!mounted) return;
+        final import = await showAppAlert(
+          context,
+          title: 'Datos de este celular',
+          message:
+              'Hay registros guardados en este dispositivo. '
+              '¿Quieres importarlos y sincronizarlos con tu cuenta de Google?',
+          cancelLabel: 'No importar',
+          confirmLabel: 'Importar',
+        );
+        if (import == false) await scope.repo.db.wipeAllUserData();
+      }
+      await prefs.setBool('guest_mode', false);
       await scope.repo.onUserSwitch(userId);
       await scope.repo.ensureDefaults();
       try {
@@ -77,6 +96,24 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  Future<void> _enterGuest() async {
+    final ok = await showAppAlert(
+      context,
+      title: 'Entrar como invitado',
+      message:
+          'Todo se guardará localmente en el celular y no tendrá '
+          'respaldo automático en la nube hasta que inicies sesión.',
+      confirmLabel: 'Continuar',
+    );
+    if (ok != true || !mounted) return;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('guest_mode', true);
+    if (!mounted) return;
+    await AppScope.of(context).repo.ensureDefaults();
+    if (!mounted) return;
+    widget.onAuthed();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -97,43 +134,42 @@ class _LoginPageState extends State<LoginPage> {
               children: [
                 const Spacer(),
                 Container(
-                  width: 88,
-                  height: 88,
+                  width: 96,
+                  height: 96,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [AppTheme.mint, AppTheme.sage],
-                    ),
-                    borderRadius: BorderRadius.circular(26),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.sage.withValues(alpha: 0.35),
-                        blurRadius: 28,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
+                    color: AppTheme.card,
+                    borderRadius: BorderRadius.circular(28),
+                    border: Border.all(color: AppTheme.borderSubtle),
+                    boxShadow: AppTheme.softShadow,
                   ),
                   child: const Icon(
                     Icons.shopping_basket_rounded,
-                    size: 44,
-                    color: AppTheme.ink800,
+                    size: 42,
+                    color: AppTheme.ink700,
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 28),
                 Text(
                   'wi-cart',
                   style: theme.textTheme.headlineLarge?.copyWith(
                     fontWeight: FontWeight.w800,
-                    letterSpacing: -0.5,
+                    letterSpacing: -1.2,
+                    height: 1.05,
                     color: AppTheme.ink700,
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'Tus listas de compras y presupuesto sin conexión',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyLarge?.copyWith(color: muted),
+                const SizedBox(height: 12),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 280),
+                  child: Text(
+                    'Listas y presupuesto, en el celular',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: muted,
+                      height: 1.35,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                 ),
                 const Spacer(),
                 if (_error != null) ...[
@@ -177,7 +213,27 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: OutlinedButton(
+                    onPressed: _busy ? null : _enterGuest,
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: AppTheme.card,
+                      side: const BorderSide(color: AppTheme.borderSubtle),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      textStyle: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    child: const Text('Entrar como invitado'),
+                  ),
+                ),
+                const SizedBox(height: 24),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
